@@ -31,7 +31,8 @@ body {
   font-family: var(--font);
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
-  cursor: none; /* projection screen — hide cursor */
+  /* Mickey-style white glove hand; click anywhere advances to the next photo. */
+  cursor: url("/glove-cursor.svg") 12 6, pointer;
 }
 
 .tnum {

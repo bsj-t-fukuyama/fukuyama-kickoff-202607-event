@@ -53,16 +53,29 @@ export const config = {
   theme: process.env.THEME ?? "最高の乾杯",
 
   // Weights for each scoring axis (see README-SCORING.md). The four axes:
-  // みんなで・楽しく・気持ちよく・はっきり 写っているか。Sums to 1.0 by default.
-  // The dummy scorer and the future AI judge both consume this same shape.
+  // みんなで・楽しく・気持ちよく・はっきり 写っているか。
+  // Equal allocation: each axis is worth an even share (100 / 4 = 25 pts), and
+  // the total score is the SUM of the four axis points. Weights sum to 1.0.
   weights: {
-    mood: Number(process.env.W_MOOD ?? 0.3), // 笑顔・表情
+    mood: Number(process.env.W_MOOD ?? 0.25), // 笑顔・表情
     people: Number(process.env.W_PEOPLE ?? 0.25), // にぎやかさ（人数）
     composition: Number(process.env.W_COMPOSITION ?? 0.25), // 構図・遠近感
-    clarity: Number(process.env.W_CLARITY ?? 0.2), // 写りの良さ（顔のわかりやすさ・描写）
+    clarity: Number(process.env.W_CLARITY ?? 0.25), // 写りの良さ（顔のわかりやすさ・描写）
   },
 
   // Lowest possible per-axis score. We never deduct below this floor so no photo
   // gets publicly humiliated — every shot starts from here and earns points up.
-  scoreFloor: Number(process.env.FLOOR ?? 50),
+  // Floor 30 keeps every total above 30 while leaving room for a wide spread.
+  scoreFloor: Number(process.env.FLOOR ?? 30),
+
+  // Scorer selection:
+  //   "ai"    – Claude vision judges the real pixels (server/scorer/aiScorer.js)
+  //   "dummy" – stable random numbers, no API call (server/scorer/index.js)
+  // Defaults to "ai" when an ANTHROPIC_API_KEY is present, else "dummy".
+  // The AI judge falls back to the dummy scorer on any per-image error.
+  judge: {
+    provider: process.env.SCORER ?? (process.env.ANTHROPIC_API_KEY ? "ai" : "dummy"),
+    model: process.env.JUDGE_MODEL ?? "claude-opus-4-8",
+    apiKey: process.env.ANTHROPIC_API_KEY ?? "",
+  },
 };

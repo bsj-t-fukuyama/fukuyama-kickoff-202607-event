@@ -5,6 +5,7 @@ import { pickComment } from "../lib/comments";
 import PhotoCard from "./PhotoCard";
 import ScoreGauge from "./ScoreGauge";
 import RevealOverlay from "./RevealOverlay";
+import CriteriaWidget from "./CriteriaWidget";
 
 // Phase boundaries as fractions of the total duration. The reveal (after
 // SETTLE_END) holds for the rest of the time so the big comment lingers.
@@ -145,6 +146,9 @@ export default function ScoringScene({
         badge={comment.badge}
         line={comment.line}
       />
+
+      {/* Floating 判定の内訳 button — only pressable while the score is shown. */}
+      <CriteriaWidget item={item} revealed={revealed} />
     </div>
   );
 }

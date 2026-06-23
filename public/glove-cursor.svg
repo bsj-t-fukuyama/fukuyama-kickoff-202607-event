@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="44" height="50" viewBox="0 0 44 50">
+  <g fill="#ffffff" stroke="#141414" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <!-- four fingers -->
+    <rect x="8"    y="9"  width="7" height="18" rx="3.5"/>
+    <rect x="16.5" y="5"  width="7" height="22" rx="3.5"/>
+    <rect x="25"   y="8"  width="7" height="19" rx="3.5"/>
+    <rect x="33"   y="12" width="7" height="15" rx="3.5"/>
+    <!-- thumb -->
+    <path d="M9 24 C3 22 1 28 4 31 L13 35 Z"/>
+    <!-- palm + rounded cuff -->
+    <path d="M7 23 H37 a4 4 0 0 1 4 4 v3 a12 12 0 0 1 -12 12 H19 A12 12 0 0 1 7 30 v-3 a4 4 0 0 1 0 -4 Z"/>
+  </g>
+  <!-- three glove seams on the back of the hand -->
+  <g stroke="#141414" stroke-width="1.6" fill="none" stroke-linecap="round">
+    <path d="M17 31 q3 5 0 10"/>
+    <path d="M24 31 q3 5 0 10"/>
+    <path d="M31 31 q2.5 4.5 0 9"/>
+  </g>
+</svg>

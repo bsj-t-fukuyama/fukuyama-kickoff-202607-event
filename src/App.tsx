@@ -41,8 +41,16 @@ export default function App() {
     advance();
   }, [item, advance]);
 
+  // Click (glove tap) anywhere skips straight to the next photo.
+  const handleClick = useCallback(() => {
+    if (item) {
+      window.clearTimeout(timerRef.current);
+      handleComplete();
+    }
+  }, [item, handleComplete]);
+
   return (
-    <Background>
+    <Background onClick={handleClick}>
       {item ? (
         <ScoringScene
           key={item.id}

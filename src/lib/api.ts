@@ -5,6 +5,18 @@ export type Axis = {
   weight: number;
 };
 
+// Concrete signals the AI judge detected (absent when the dummy scorer ran).
+export type JudgeSignals = {
+  peopleCount?: number;
+  personDetected?: boolean;
+  multiplePeople?: boolean;
+  smiling?: boolean;
+  posing?: boolean;
+  instagramWorthy?: boolean;
+  faceClarity?: boolean;
+  note?: string;
+};
+
 export type ScoredItem = {
   id: string;
   name: string;
@@ -13,6 +25,7 @@ export type ScoredItem = {
   score: number; // 0..100
   grade: "S" | "A" | "B" | "C" | "D";
   breakdown: Axis[];
+  signals?: JudgeSignals;
 };
 
 export type QueueStats = {

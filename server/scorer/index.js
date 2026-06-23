@@ -1,9 +1,10 @@
 // Pluggable scorer.
 //
-// Right now this is a DUMMY implementation: it does not look at the pixels at
-// all, it just produces stable, good-looking numbers per image. It is shaped so
-// that a real AI judge can be dropped in later without touching the rest of the
-// app — keep the same signature and return shape.
+// This DUMMY implementation does not look at the pixels — it just produces
+// stable, good-looking numbers per image. The real pixel-judging scorer lives
+// in ./aiScorer.js (Claude vision); both return the same shape and share the
+// weighting + FLOOR math in composeResult() below, so the rest of the app never
+// needs to know which one ran.
 //
 //   scoreImage(item, { theme, weights, floor }) -> {
 //     score:     number 0..100,
@@ -16,7 +17,7 @@
 // The four judging axes are defined in README-SCORING.md:
 //   みんなで・楽しく・気持ちよく・はっきり 写っているか。
 
-const AXES = [
+export const AXES = [
   { key: "mood", label: "笑顔・表情" },
   { key: "people", label: "にぎやかさ（人数）" },
   { key: "composition", label: "構図・遠近感" },
@@ -26,7 +27,7 @@ const AXES = [
 // Default lowest per-axis score. Mirrors config.scoreFloor; kept here so the
 // scorer also works standalone. We add points on top of this floor (加点方式)
 // instead of deducting, so no photo is publicly humiliated.
-const DEFAULT_FLOOR = 50;
+export const DEFAULT_FLOOR = 50;
 
 // Deterministic 0..1 hash from a string so the same image always scores the same.
 function seededRandom(seed) {
@@ -44,7 +45,7 @@ function seededRandom(seed) {
   };
 }
 
-function gradeFor(score) {
+export function gradeFor(score) {
   if (score >= 90) return "S";
   if (score >= 80) return "A";
   if (score >= 65) return "B";
@@ -52,17 +53,18 @@ function gradeFor(score) {
   return "D";
 }
 
-export function scoreImage(item, { theme, weights, floor = DEFAULT_FLOOR }) {
-  const rand = seededRandom(`${item.id}:${theme}`);
-
+// Turn raw 0..100 per-axis values into the final scored result. Each axis is
+// clamped up to `floor` (加点方式 — never below the floor) then weighted per
+// README-SCORING.md. Shared by the dummy scorer and the AI judge so the math
+// and the kindness floor stay identical no matter which one produced the values.
+export function composeResult(values, { weights, floor = DEFAULT_FLOOR } = {}) {
   let weightedSum = 0;
   let weightTotal = 0;
   const breakdown = AXES.map((axis) => {
-    // 加点方式: every axis starts from `floor` and earns the remaining headroom.
-    // This guarantees no axis ever drops below the floor (no晒し上げ).
-    const earned = rand() * (100 - floor);
-    const value = Math.round(Math.max(0, Math.min(100, floor + earned)));
-    const weight = weights[axis.key] ?? 0;
+    const raw = Number(values[axis.key]);
+    const safe = Number.isFinite(raw) ? raw : floor;
+    const value = Math.round(Math.max(floor, Math.min(100, safe)));
+    const weight = weights?.[axis.key] ?? 0;
     weightedSum += value * weight;
     weightTotal += weight;
     return { key: axis.key, label: axis.label, value, weight };
@@ -70,4 +72,12 @@ export function scoreImage(item, { theme, weights, floor = DEFAULT_FLOOR }) {
 
   const score = Math.round(weightTotal > 0 ? weightedSum / weightTotal : 0);
   return { score, grade: gradeFor(score), breakdown };
+}
+
+export function scoreImage(item, { theme, weights, floor = DEFAULT_FLOOR }) {
+  const rand = seededRandom(`${item.id}:${theme}`);
+  // 加点方式: every axis starts from `floor` and earns the remaining headroom.
+  const values = {};
+  for (const axis of AXES) values[axis.key] = floor + rand() * (100 - floor);
+  return composeResult(values, { weights, floor });
 }

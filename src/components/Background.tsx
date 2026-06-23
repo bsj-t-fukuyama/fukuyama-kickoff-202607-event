@@ -2,9 +2,15 @@ import type { ReactNode } from "react";
 
 // Full-screen animated backdrop: drifting blue gradient blobs, a faint moving
 // grid, a vignette and a grain overlay. Shared by every screen.
-export default function Background({ children }: { children: ReactNode }) {
+export default function Background({
+  children,
+  onClick,
+}: {
+  children: ReactNode;
+  onClick?: () => void;
+}) {
   return (
-    <div style={styles.root}>
+    <div style={styles.root} onClick={onClick}>
       <div style={{ ...styles.blob, ...styles.blobA }} />
       <div style={{ ...styles.blob, ...styles.blobB }} />
       <div style={styles.grid} />
