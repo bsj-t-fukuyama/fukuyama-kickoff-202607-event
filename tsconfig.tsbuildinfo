@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/components/background.tsx","./src/components/breakdownbars.tsx","./src/components/idlescreen.tsx","./src/components/photocard.tsx","./src/components/revealoverlay.tsx","./src/components/scoregauge.tsx","./src/components/scoringscene.tsx","./src/lib/api.ts","./src/lib/comments.ts"],"version":"5.9.3"}

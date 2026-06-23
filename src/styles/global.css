@@ -1,0 +1,71 @@
+:root {
+  --blue-bright: #0199ff;
+  --blue-deep: #0066ff;
+  --blue-glow: #38b6ff;
+  --ink: #04060d;
+  --ink-2: #0a0f1e;
+  --text: #eaf4ff;
+  --text-dim: #7d93b8;
+  --line: rgba(120, 170, 255, 0.14);
+
+  --font: "Helvetica Neue", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "SF Mono", "Roboto Mono", ui-monospace, Menlo, monospace;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  background: var(--ink);
+  color: var(--text);
+  font-family: var(--font);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  cursor: none; /* projection screen — hide cursor */
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+.mono {
+  font-family: var(--mono);
+}
+
+/* Uppercase label used for お題 / status text */
+.eyebrow {
+  font-size: clamp(0.7rem, 1vw, 0.95rem);
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+@keyframes drift-a {
+  0% { transform: translate(-10%, -8%) scale(1); }
+  50% { transform: translate(12%, 10%) scale(1.18); }
+  100% { transform: translate(-10%, -8%) scale(1); }
+}
+@keyframes drift-b {
+  0% { transform: translate(15%, 12%) scale(1.1); }
+  50% { transform: translate(-12%, -10%) scale(0.92); }
+  100% { transform: translate(15%, 12%) scale(1.1); }
+}
+@keyframes grid-pan {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 -80px; }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
