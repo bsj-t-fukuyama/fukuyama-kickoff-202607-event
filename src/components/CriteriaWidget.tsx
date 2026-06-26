@@ -23,7 +23,7 @@ const AXIS_DESC: Record<string, Record<Mark, string>> = {
   clarity: { good: "くっきり鮮明", normal: "しっかり見える", hmm: "やわらかい写り" },
 };
 
-// Score buckets (axis values live in 30..100 thanks to the FLOOR).
+// Score buckets (axis values live in 15..100 thanks to the FLOOR).
 function bucketFor(value: number): Mark {
   if (value >= 80) return "good";
   if (value >= 60) return "normal";
@@ -70,8 +70,13 @@ export default function CriteriaWidget({
   item: ScoredItem;
   revealed: boolean;
 }) {
-  const maxShare = Math.round(100 / item.breakdown.length); // 25 for 4 axes
-  const rawPoints = item.breakdown.map((a) => (a.value / 100) * (100 / item.breakdown.length));
+  // Each axis's max share follows its weight (normally an even 25 each; the
+  // にぎやかさ axis grows for 大人数 photos because the server boosts its weight).
+  // Points are value×share and apportioned to sum to exactly item.score.
+  const totalWeight = item.breakdown.reduce((s, a) => s + (a.weight ?? 0), 0) || 1;
+  const shares = item.breakdown.map((a) => ((a.weight ?? 0) / totalWeight) * 100);
+  const maxShares = shares.map((sh) => Math.round(sh));
+  const rawPoints = item.breakdown.map((a, i) => (a.value / 100) * shares[i]);
   const points = apportion(rawPoints, item.score);
 
   const s = item.signals;
@@ -113,17 +118,24 @@ export default function CriteriaWidget({
             return (
               <motion.div key={axis.key} style={styles.block} variants={rowVariants}>
                 <div style={styles.axisTop}>
-                  <span style={styles.axisName}>{axis.label}</span>
+                  <span style={styles.axisName}>
+                    {axis.label}
+                    {axis.key === "people" && (
+                      <span style={styles.peopleCount}>
+                        （{typeof s?.peopleCount === "number" ? `${s.peopleCount}人` : "No entry"}）
+                      </span>
+                    )}
+                  </span>
                   <span style={styles.points}>
                     <span className="tnum">{points[i]}</span>
-                    <span style={styles.pointsMax}> / {maxShare}</span>
+                    <span style={styles.pointsMax}> / {maxShares[i]}</span>
                   </span>
                 </div>
                 <div style={styles.track}>
                   <div
                     style={{
                       ...styles.fill,
-                      width: `${(points[i] / maxShare) * 100}%`,
+                      width: `${(points[i] / (maxShares[i] || 1)) * 100}%`,
                       background: m.color,
                       boxShadow: `0 0 14px ${m.color}aa`,
                     }}
@@ -166,7 +178,7 @@ export default function CriteriaWidget({
           )}
 
           <motion.p style={styles.foot} variants={rowVariants}>
-            最低30点からの加点方式。容姿は採点していません🎉
+            最低15点からの加点方式。容姿は採点していません🎉
           </motion.p>
         </motion.aside>
       )}
@@ -180,7 +192,7 @@ const styles: Record<string, React.CSSProperties> = {
     top: 0,
     right: 0,
     height: "100vh",
-    width: "clamp(360px, 34vw, 600px)",
+    width: "clamp(476px, 45vw, 792px)",
     zIndex: 10001,
     display: "flex",
     flexDirection: "column",
@@ -228,7 +240,26 @@ const styles: Record<string, React.CSSProperties> = {
   block: { display: "grid", gap: "clamp(0.3rem, 0.8vh, 0.7rem)", transformOrigin: "right center" },
   axisTop: { display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "0.8rem" },
   axisName: { fontSize: "clamp(1.2rem, 2vw, 2.2rem)", fontWeight: 700, color: "var(--text)" },
-  points: { display: "flex", alignItems: "baseline", color: "var(--blue-glow)" },
+  // スキャンできた実際の人数を、にぎやかさラベルの後ろにめっちゃ小さく薄く添える。
+  peopleCount: {
+    fontSize: "0.62em",
+    fontWeight: 500,
+    color: "var(--text-dim)",
+    opacity: 0.55,
+    marginLeft: "0.15em",
+    letterSpacing: "0.02em",
+  },
+  points: {
+    display: "flex",
+    alignItems: "baseline",
+    color: "var(--blue-glow)",
+    // The biggest text in the panel — each axis's contribution is the headline.
+    fontSize: "clamp(3.4rem, 6vw, 6.4rem)",
+    fontWeight: 900,
+    lineHeight: 0.85,
+    letterSpacing: "-0.03em",
+    textShadow: "0 0 26px rgba(56,182,255,0.45)",
+  },
   pointsMax: {
     fontSize: "clamp(0.95rem, 1.3vw, 1.5rem)",
     fontWeight: 600,

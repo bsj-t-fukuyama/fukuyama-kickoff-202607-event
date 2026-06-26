@@ -31,7 +31,7 @@ body {
   font-family: var(--font);
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
-  /* Mickey-style white glove hand; click anywhere advances to the next photo. */
+  /* Mickey-style white glove hand cursor. 次へ進むのは右下のスキップボタンから。 */
   cursor: url("/glove-cursor.svg") 12 6, pointer;
 }
 

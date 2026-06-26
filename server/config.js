@@ -33,10 +33,30 @@ export const config = {
 
   // Google Drive settings (only used when driveProvider === "google").
   google: {
-    folderId: process.env.DRIVE_FOLDER_ID ?? "1gFfMPwP7fhoWD8IenKLPZPt6PCmibsxw",
+    folderId: process.env.DRIVE_FOLDER_ID ?? "1Zv2dSHqLw7D-UPUcCNSmUrY3B410yLER",
     // Path to a service-account JSON key. The service account must have the
     // folder shared with it (Viewer is enough).
     credentialsPath: process.env.GOOGLE_APPLICATION_CREDENTIALS ?? "",
+  },
+
+  // Google Sheet used as a tiny DB for scan results (keyed by image id).
+  // Columns: A=画像id B=合計スコア C=スキャン済みフラグ D=(空) E=user名 F=画像名。
+  //
+  // 書き込み方法は2通り（どちらか一方でOK）:
+  //   1) Apps Script Web App（推奨・課金/サービスアカウント不要）:
+  //        SHEET_WEBHOOK_URL にデプロイURLを設定。サーバーはそこへ POST するだけ。
+  //   2) サービスアカウント: GOOGLE_APPLICATION_CREDENTIALS を設定し、対象シートを
+  //        サービスアカウントに「編集者」で共有。
+  // どちらも無ければ保存は自動的に無効（採点は通常どおり動作）。SHEET_SYNC=off で明示無効化。
+  sheets: {
+    spreadsheetId: process.env.SHEET_ID ?? "1WVjDUq_F5NQgXn50KeoURIiC7Jho68QxO1kp84n2jeY",
+    credentialsPath: process.env.GOOGLE_APPLICATION_CREDENTIALS ?? "",
+    // 既定の保存先 Web App URL。/settings から上書き保存でき、env でも上書き可能。
+    webhookUrl:
+      process.env.SHEET_WEBHOOK_URL ??
+      "https://script.google.com/macros/s/AKfycbyyhmWxs1wRFr8Q-Xjzy4h7eGMUJeuTV9-12yEOrh9-GmkvIFEusaW9NT4kpFZ_3hhQ/exec",
+    webhookToken: process.env.SHEET_WEBHOOK_TOKEN ?? "",
+    enabled: (process.env.SHEET_SYNC ?? "auto") !== "off",
   },
 
   // Mock provider: how many sample photos to pretend are "already in Drive",
@@ -54,19 +74,20 @@ export const config = {
 
   // Weights for each scoring axis (see README-SCORING.md). The four axes:
   // みんなで・楽しく・気持ちよく・はっきり 写っているか。
-  // Equal allocation: each axis is worth an even share (100 / 4 = 25 pts), and
-  // the total score is the SUM of the four axis points. Weights sum to 1.0.
+  // にぎやかさ（人数）を主役にした配分: 他の3軸は各20点、にぎやかさは40点。
+  // 総合スコアは4軸の配点の合計（重みの合計は 1.0）。
   weights: {
-    mood: Number(process.env.W_MOOD ?? 0.25), // 笑顔・表情
-    people: Number(process.env.W_PEOPLE ?? 0.25), // にぎやかさ（人数）
-    composition: Number(process.env.W_COMPOSITION ?? 0.25), // 構図・遠近感
-    clarity: Number(process.env.W_CLARITY ?? 0.25), // 写りの良さ（顔のわかりやすさ・描写）
+    mood: Number(process.env.W_MOOD ?? 0.2), // 笑顔・表情（20点）
+    people: Number(process.env.W_PEOPLE ?? 0.4), // にぎやかさ（人数）（40点）
+    composition: Number(process.env.W_COMPOSITION ?? 0.2), // 構図・遠近感（20点）
+    clarity: Number(process.env.W_CLARITY ?? 0.2), // 写りの良さ（顔のわかりやすさ・描写）（20点）
   },
 
   // Lowest possible per-axis score. We never deduct below this floor so no photo
   // gets publicly humiliated — every shot starts from here and earns points up.
-  // Floor 30 keeps every total above 30 while leaving room for a wide spread.
-  scoreFloor: Number(process.env.FLOOR ?? 30),
+  // Floor 15 keeps every total at or above 15 while leaving a wide spread of
+  // possible scores (15〜100) so good and great shots pull clearly apart.
+  scoreFloor: Number(process.env.FLOOR ?? 15),
 
   // Scorer selection:
   //   "ai"    – Claude vision judges the real pixels (server/scorer/aiScorer.js)

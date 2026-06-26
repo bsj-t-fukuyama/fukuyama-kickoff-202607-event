@@ -3,12 +3,14 @@ import cors from "cors";
 import { config } from "./config.js";
 import { createDriveProvider } from "./drive/index.js";
 import { createQueue } from "./queue.js";
+import { getSettings, setSheetWebhookUrl } from "./settings.js";
 
 const provider = createDriveProvider();
 const queue = createQueue(provider);
 
 const app = express();
 app.use(cors());
+app.use(express.json());
 
 // Next unscanned image after the given cursor (-1 to start from the beginning).
 app.get("/api/next", (req, res) => {
@@ -16,12 +18,16 @@ app.get("/api/next", (req, res) => {
   res.json(queue.next(Number.isNaN(cursor) ? -1 : cursor));
 });
 
-// Current config the screen needs (theme, weights, provider).
+// Current config the screen needs (theme, weights, provider, drive URL).
 app.get("/api/config", (_req, res) => {
   res.json({
     theme: config.theme,
     weights: config.weights,
     provider: provider.name,
+    // 設定画面が表示する“現在のドライブURL”。folderId から組み立てる。
+    driveUrl: config.google.folderId
+      ? `https://drive.google.com/drive/folders/${config.google.folderId}`
+      : "",
     animationMs: 10_000,
   });
 });
@@ -38,6 +44,14 @@ app.get("/api/image/:id", async (req, res) => {
     console.error(`[image] ${req.params.id}:`, err.message);
     res.status(502).json({ error: "failed to fetch image" });
   }
+});
+
+// Editable runtime settings (currently the Sheet save destination URL).
+app.get("/api/settings", (_req, res) => res.json(getSettings()));
+app.post("/api/settings", (req, res) => {
+  const { sheetWebhookUrl } = req.body ?? {};
+  if (typeof sheetWebhookUrl === "string") setSheetWebhookUrl(sheetWebhookUrl);
+  res.json(getSettings());
 });
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));

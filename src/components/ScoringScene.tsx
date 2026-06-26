@@ -7,11 +7,13 @@ import ScoreGauge from "./ScoreGauge";
 import RevealOverlay from "./RevealOverlay";
 import CriteriaWidget from "./CriteriaWidget";
 
-// Phase boundaries as fractions of the total duration. The reveal (after
-// SETTLE_END) holds for the rest of the time so the big comment lingers.
+// Phase boundaries as fractions of the total duration (SCORING_MS = 10s). The
+// reveal (after SETTLE_END) holds for the rest of the time so the score + the
+// slide-in detail panel linger. The analyzing phase was trimmed by 1.5s and
+// that time moved into the reveal window.
 const INTRO_END = 0.08;
-const ANALYZE_END = 0.45;
-const SETTLE_END = 0.62;
+const ANALYZE_END = 0.2; // analyzing trimmed (−2.5s total)
+const SETTLE_END = 0.37; // reveal extended (+2.5s total)
 
 const REVEAL_LABEL: Record<string, string> = {
   S: "PERFECT SHOT",
@@ -158,7 +160,8 @@ const styles: Record<string, React.CSSProperties> = {
     height: "100%",
     display: "flex",
     flexDirection: "column",
-    padding: "clamp(1.5rem, 4vh, 3rem) clamp(2rem, 5vw, 5rem)",
+    // 横長写真をなるべく大きく見せるため左右パディングは控えめに。
+    padding: "clamp(1.5rem, 4vh, 3rem) clamp(1rem, 2.5vw, 2.5rem)",
     gap: "clamp(1rem, 2.5vh, 2rem)",
   },
   header: { display: "grid", gap: "0.5rem" },
@@ -174,8 +177,9 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
     minHeight: 0,
     display: "grid",
-    gridTemplateColumns: "minmax(0, 1.05fr) minmax(0, 1fr)",
-    gap: "clamp(2rem, 5vw, 5rem)",
+    // 写真側を広めに、すき間も詰めて、写真をなるべく大きく。
+    gridTemplateColumns: "minmax(0, 1.45fr) minmax(0, 1fr)",
+    gap: "clamp(1rem, 2.5vw, 2.5rem)",
     alignItems: "center",
   },
   photoCol: { height: "100%", minHeight: 0, paddingBlock: "1vh" },

@@ -69,9 +69,12 @@ const styles: Record<string, React.CSSProperties> = {
     display: "grid",
     placeItems: "center",
     padding: "4vmin",
-    // Darken everything behind, with a warm spotlight in the middle.
+    // Reserve room on the right for the slide-in detail panel, so the score
+    // centers in the remaining left space instead of behind the panel.
+    paddingRight: "clamp(476px, 49vw, 860px)",
+    // Darken everything behind, with a warm spotlight under the (left-shifted) score.
     background:
-      "radial-gradient(circle at 50% 42%, rgba(10,20,45,0.55) 0%, rgba(2,4,12,0.82) 60%, rgba(0,0,0,0.92) 100%)",
+      "radial-gradient(circle at 29% 42%, rgba(10,20,45,0.55) 0%, rgba(2,4,12,0.82) 60%, rgba(0,0,0,0.92) 100%)",
     backdropFilter: "blur(6px)",
     pointerEvents: "none",
     perspective: "1200px",
@@ -119,9 +122,12 @@ const styles: Record<string, React.CSSProperties> = {
   },
   line: {
     maxWidth: "92vw",
+    // コメントは文節の真ん中あたりに手で改行(\n)を入れてあるので尊重する
+    // （横長PCで“微妙な位置で折り返す”のを防ぎ、いい感じの2行に収める）。
+    whiteSpace: "pre-line",
     fontSize: "clamp(2rem, 7.5vw, 6rem)",
     fontWeight: 900,
-    lineHeight: 1.08,
+    lineHeight: 1.12,
     letterSpacing: "-0.01em",
     background: "linear-gradient(180deg, #ffffff 0%, #ffe9a8 40%, #ff7ad9 75%, #9b5cff 100%)",
     WebkitBackgroundClip: "text",

@@ -9,6 +9,7 @@
 import { config } from "./config.js";
 import { scoreImage } from "./scorer/index.js";
 import { scoreImageWithAI, createJudgeClient } from "./scorer/aiScorer.js";
+import { createSheetsStore } from "./sheets/index.js";
 
 export function createQueue(provider) {
   // Ordered list of scored items. Index in this array IS the cursor space.
@@ -18,6 +19,9 @@ export function createQueue(provider) {
   const useAI = config.judge.provider === "ai";
   // One shared client across all images keeps the connection warm.
   const judgeClient = useAI ? createJudgeClient(config.judge.apiKey) : null;
+
+  // Google Sheet "DB" for scan results (no-op when not configured).
+  const sheetsStore = createSheetsStore();
 
   // Load the raw image bytes for any provider: absolute URLs (mock /
   // google-public) are fetched directly; the private google provider streams
@@ -65,10 +69,17 @@ export function createQueue(provider) {
         if (seen.has(f.id)) continue;
         seen.add(f.id);
         const result = await score(f);
-        items.push({
+        const item = {
           ...f,
           ...result, // score, grade, breakdown, (signals)
           discoveredAt: Date.now(),
+        };
+        items.push(item);
+
+        // スキャン後、シート(DB)へ保存: 画像id・合計スコア・スキャン済みフラグ(true)。
+        // 採点フローを止めないよう fire-and-forget（失敗してもログのみ）。
+        sheetsStore.save(item).catch((err) => {
+          console.error(`[sheets] save failed for ${item.name} (${item.id}):`, err.message);
         });
       }
     } catch (err) {
