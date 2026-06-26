@@ -55,3 +55,13 @@ export async function saveSheetWebhookUrl(url: string): Promise<string> {
   const data = await res.json();
   return typeof data.sheetWebhookUrl === "string" ? data.sheetWebhookUrl : "";
 }
+
+// --- ランキングのリセット --------------------------------------------------
+// シートをヘッダのみに戻し、サーバーの集計もクリアして 1 から再スキャンさせる。
+export async function resetRanking(): Promise<void> {
+  const res = await fetch("/api/reset", { method: "POST" });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || `/api/reset ${res.status}`);
+  }
+}

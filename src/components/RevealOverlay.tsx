@@ -103,7 +103,8 @@ const styles: Record<string, React.CSSProperties> = {
     transformStyle: "preserve-3d",
   },
   score: {
-    fontSize: "clamp(8rem, 34vmin, 26rem)",
+    // 約1.1倍に拡大。
+    fontSize: "clamp(8.8rem, 37vmin, 28.6rem)",
     fontWeight: 900,
     lineHeight: 0.9,
     letterSpacing: "-0.04em",
@@ -125,7 +126,8 @@ const styles: Record<string, React.CSSProperties> = {
     // コメントは文節の真ん中あたりに手で改行(\n)を入れてあるので尊重する
     // （横長PCで“微妙な位置で折り返す”のを防ぎ、いい感じの2行に収める）。
     whiteSpace: "pre-line",
-    fontSize: "clamp(2rem, 7.5vw, 6rem)",
+    // 少し大きすぎたので約0.85倍に。
+    fontSize: "clamp(1.7rem, 6.4vw, 5.1rem)",
     fontWeight: 900,
     lineHeight: 1.12,
     letterSpacing: "-0.01em",

@@ -9,7 +9,7 @@
 import { config } from "./config.js";
 import { scoreImage } from "./scorer/index.js";
 import { scoreImageWithAI, createJudgeClient } from "./scorer/aiScorer.js";
-import { createSheetsStore } from "./sheets/index.js";
+import { createSheetsStore, fetchScannedIds } from "./sheets/index.js";
 
 export function createQueue(provider) {
   // Ordered list of scored items. Index in this array IS the cursor space.
@@ -104,10 +104,30 @@ export function createQueue(provider) {
     };
   }
 
-  function start() {
-    poll();
+  // 起動時にシート(DB)から「スキャン済み(C=true)の画像id」を読み込み、seen に登録する。
+  // これでサーバー再起動/リロード後も、既にスキャン済みの画像を再スキャン（再採点）しない。
+  async function loadScanned() {
+    try {
+      const ids = await fetchScannedIds();
+      for (const id of ids) seen.add(id);
+      if (ids.size) console.log(`[queue] シートのスキャン済み ${ids.size} 件を再スキャン対象から除外`);
+    } catch (err) {
+      console.error("[queue] スキャン済みidの読み込みに失敗:", err.message);
+    }
+  }
+
+  async function start() {
+    await loadScanned();
+    await poll();
     return setInterval(poll, config.pollIntervalMs);
   }
 
-  return { start, next, poll };
+  // 集計をリセット: 採点済みリストと seen をクリアして 1 から再スキャンできる状態に戻す。
+  // （シート側のクリアは呼び出し元が resetSheet() で先に行う前提）。
+  function reset() {
+    items.length = 0;
+    seen.clear();
+  }
+
+  return { start, next, poll, reset };
 }

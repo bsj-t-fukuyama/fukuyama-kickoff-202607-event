@@ -7,6 +7,7 @@ import ScoringScene from "./components/ScoringScene";
 import ResultScreen from "./components/ResultScreen";
 import ResultsButton from "./components/ResultsButton";
 import SkipButton from "./components/SkipButton";
+import PrevButton from "./components/PrevButton";
 import SettingsScreen from "./components/SettingsScreen";
 import SettingsButton from "./components/SettingsButton";
 
@@ -71,6 +72,15 @@ export default function App() {
     }
   }, [item, handleComplete]);
 
+  // 左下の戻るボタンから一つ前の写真へ。advance() は cursor+1 を取りに行くので、
+  // 「前の写真の手前」に cursor を巻き戻してから advance する。
+  const handlePrev = useCallback(() => {
+    if (!item || item.index <= 0) return;
+    window.clearTimeout(timerRef.current);
+    cursorRef.current = item.index - 2;
+    advance();
+  }, [item, advance]);
+
   const onResult = path === RESULT_PATH;
   const onSettings = path === SETTINGS_PATH;
 
@@ -102,6 +112,7 @@ export default function App() {
             )}
             <SettingsButton onOpen={() => navigate(SETTINGS_PATH)} />
             <ResultsButton onOpen={() => navigate(RESULT_PATH)} />
+            {item && item.index > 0 && <PrevButton onPrev={handlePrev} />}
             {item && <SkipButton onSkip={handleSkip} />}
           </motion.div>
         )}

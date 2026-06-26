@@ -1,8 +1,8 @@
 /**
  * スキャン結果保存用 Apps Script Web App（課金・サービスアカウント不要）。
  *
- * 列: A=画像id  B=合計スコア  C=スキャン済みフラグ  D=(空)  E=user名  F=画像名
- * 画像idをキーに upsert（あれば A:C と F を更新、無ければ1行追記）。E=user名 は温存。
+ * 列: A=画像id  B=合計スコア  C=スキャン済みフラグ  D=user名  E=画像名
+ * 画像idをキーに upsert（あれば A:C と E を更新、無ければ1行追記）。D=user名 は温存。
  *
  * ▼ セットアップ手順
  *  1. 対象スプレッドシートを開く → 上部メニュー「拡張機能」→「Apps Script」。
@@ -30,6 +30,17 @@ function doPost(e) {
       return json_({ ok: false, error: "unauthorized" });
     }
 
+    // リセット: ヘッダ(1行目)以外のデータ行をすべて消去して元の状態に戻す。
+    if (body.action === "reset") {
+      var sheet0 = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+      var last = sheet0.getLastRow();
+      var lastCol = sheet0.getLastColumn();
+      if (last > 1 && lastCol > 0) {
+        sheet0.getRange(2, 1, last - 1, lastCol).clearContent();
+      }
+      return json_({ ok: true, action: "reset", cleared: Math.max(0, last - 1) });
+    }
+
     const id = String(body.id || "");
     if (!id) return json_({ ok: false, error: "missing id" });
 
@@ -50,22 +61,47 @@ function doPost(e) {
     }
 
     if (row === -1) {
-      // 新規: A〜F を1行追記（D=空, E=user名 は空）
-      sheet.appendRow([id, score, scanned, "", "", name]);
+      // 新規: A〜E を1行追記（D=user名は空, E=画像名）
+      sheet.appendRow([id, score, scanned, "", name]);
       return json_({ ok: true, action: "appended" });
     }
 
-    // 既存: A:C と F のみ更新（E=user名 は触らない）
+    // 既存: A:C と E(画像名) のみ更新（D=user名 は触らない）
     sheet.getRange(row, 1, 1, 3).setValues([[id, score, scanned]]); // A:C
-    sheet.getRange(row, 6).setValue(name); // F
+    sheet.getRange(row, 5).setValue(name); // E=画像名
+    sheet.getRange(row, 6).setValue(""); // F: 以前の誤書き込みを掃除
     return json_({ ok: true, action: "updated", row: row });
   } catch (err) {
     return json_({ ok: false, error: String(err) });
   }
 }
 
-// 動作確認用（ブラウザでURLを開くと表示される）
-function doGet() {
+// GET:
+//  ?action=top&limit=3 … スキャン済み(C=true)の中から 合計スコア(B) 上位を返す（結果発表用）。
+//  それ以外           … 動作確認用のメッセージ。
+function doGet(e) {
+  var action = e && e.parameter ? e.parameter.action : "";
+  if (action === "top") {
+    var limit = Math.max(1, Math.min(50, Number(e.parameter.limit) || 3));
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+    var values = sheet.getDataRange().getValues();
+    var rows = [];
+    for (var i = 0; i < values.length; i++) {
+      var r = values[i];
+      var id = String(r[0] || "");
+      if (!id) continue;
+      var scanned = r[2];
+      var isScanned = scanned === true || String(scanned).toLowerCase() === "true";
+      if (!isScanned) continue;
+      var score = Number(r[1]);
+      if (isNaN(score)) continue;
+      rows.push({ id: id, score: score, user: r[3] || "", name: r[4] || "" });
+    }
+    rows.sort(function (a, b) {
+      return b.score - a.score;
+    });
+    return json_({ ok: true, results: rows.slice(0, limit) });
+  }
   return json_({ ok: true, hint: "POST scan results here" });
 }
 

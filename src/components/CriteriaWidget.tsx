@@ -23,7 +23,7 @@ const AXIS_DESC: Record<string, Record<Mark, string>> = {
   clarity: { good: "くっきり鮮明", normal: "しっかり見える", hmm: "やわらかい写り" },
 };
 
-// Score buckets (axis values live in 15..100 thanks to the FLOOR).
+// Score buckets (axis values live in 10..100 thanks to the FLOOR).
 function bucketFor(value: number): Mark {
   if (value >= 80) return "good";
   if (value >= 60) return "normal";
@@ -80,15 +80,6 @@ export default function CriteriaWidget({
   const points = apportion(rawPoints, item.score);
 
   const s = item.signals;
-  const chips: string[] = [];
-  if (s) {
-    if (typeof s.peopleCount === "number") chips.push(`${s.peopleCount}人`);
-    if (s.multiplePeople) chips.push("複数人");
-    if (s.smiling) chips.push("笑顔");
-    if (s.posing) chips.push("右手グッド");
-    if (s.instagramWorthy) chips.push("インスタ映え");
-    if (s.faceClarity) chips.push("顔くっきり");
-  }
 
   return (
     <AnimatePresence>
@@ -161,25 +152,6 @@ export default function CriteriaWidget({
               <span style={styles.sumUnit}>点</span>
             </span>
           </motion.div>
-
-          {(chips.length > 0 || s?.note) && (
-            <motion.div style={styles.signals} variants={rowVariants}>
-              {chips.length > 0 && (
-                <div style={styles.chips}>
-                  {chips.map((c) => (
-                    <span key={c} style={styles.chip}>
-                      {c}
-                    </span>
-                  ))}
-                </div>
-              )}
-              {s?.note && <p style={styles.note}>「{s.note}」</p>}
-            </motion.div>
-          )}
-
-          <motion.p style={styles.foot} variants={rowVariants}>
-            最低15点からの加点方式。容姿は採点していません🎉
-          </motion.p>
         </motion.aside>
       )}
     </AnimatePresence>
@@ -196,9 +168,11 @@ const styles: Record<string, React.CSSProperties> = {
     zIndex: 10001,
     display: "flex",
     flexDirection: "column",
-    justifyContent: "center",
-    gap: "clamp(0.8rem, 1.8vh, 1.8rem)",
-    padding: "clamp(1.5rem, 4vh, 3.5rem) clamp(1.5rem, 3vw, 3rem)",
+    // 収まる時は中央寄せ、内容が画面より高い時は上揃えにして一番上(合計得点とグレード)が見切れないように。
+    justifyContent: "safe center",
+    gap: "clamp(0.8rem, 2.2vh, 2.8rem)",
+    // 左右パディングはさらに半分にして、得点コメントが意図せず折り返さないよう横幅を確保。
+    padding: "clamp(1rem, 3vh, 3.5rem) clamp(0.4rem, 0.75vw, 0.75rem)",
     transformOrigin: "right center",
     background:
       "linear-gradient(270deg, rgba(8,14,32,0.98) 0%, rgba(8,14,32,0.94) 70%, rgba(8,14,32,0) 100%)",
@@ -210,6 +184,8 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: "space-between",
     alignItems: "baseline",
     gap: "1rem",
+    // 合計得点(大きい数字)とグレードの上端が詰めた lineHeight でたまに見切れるので少しだけ余白。
+    paddingTop: "5px",
     paddingBottom: "clamp(0.5rem, 1.4vh, 1.2rem)",
     borderBottom: "1px solid rgba(120,170,255,0.18)",
     transformOrigin: "right center",
@@ -224,7 +200,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   totalWrap: { display: "flex", alignItems: "baseline", gap: "0.5rem" },
   totalScore: {
-    fontSize: "clamp(3rem, 6vw, 6rem)",
+    // 幅(vw)だけでなく高さ(vh)にも追従させ、縦が低い画面でも縮んで見切れないように。
+    fontSize: "clamp(2.4rem, min(6vw, 6.8vh), 6rem)",
     fontWeight: 900,
     lineHeight: 0.9,
     letterSpacing: "-0.03em",
@@ -237,9 +214,9 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 900,
     color: "var(--blue-glow)",
   },
-  block: { display: "grid", gap: "clamp(0.3rem, 0.8vh, 0.7rem)", transformOrigin: "right center" },
+  block: { display: "grid", gap: "clamp(0.5rem, 1.2vh, 1rem)", transformOrigin: "right center" },
   axisTop: { display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "0.8rem" },
-  axisName: { fontSize: "clamp(1.2rem, 2vw, 2.2rem)", fontWeight: 700, color: "var(--text)" },
+  axisName: { fontSize: "clamp(1.3rem, min(2.5vw, 3.4vh), 2.8rem)", fontWeight: 700, color: "var(--text)" },
   // スキャンできた実際の人数を、にぎやかさラベルの後ろにめっちゃ小さく薄く添える。
   peopleCount: {
     fontSize: "0.62em",
@@ -254,27 +231,28 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "baseline",
     color: "var(--blue-glow)",
     // The biggest text in the panel — each axis's contribution is the headline.
-    fontSize: "clamp(3.4rem, 6vw, 6.4rem)",
+    // 幅(vw)と高さ(vh)の小さい方でスケールさせ、低い画面では縮めて下まで収める。
+    fontSize: "clamp(2.6rem, min(7vw, 7.6vh), 7.6rem)",
     fontWeight: 900,
     lineHeight: 0.85,
     letterSpacing: "-0.03em",
     textShadow: "0 0 26px rgba(56,182,255,0.45)",
   },
   pointsMax: {
-    fontSize: "clamp(0.95rem, 1.3vw, 1.5rem)",
+    fontSize: "clamp(1.1rem, 1.6vw, 1.9rem)",
     fontWeight: 600,
     color: "var(--text-dim)",
   },
   track: {
-    height: "clamp(8px, 1.1vh, 14px)",
+    height: "clamp(10px, 1.5vh, 18px)",
     borderRadius: 99,
     background: "rgba(120,170,255,0.14)",
     overflow: "hidden",
   },
   fill: { height: "100%", borderRadius: 99 },
   descRow: { display: "flex", alignItems: "baseline", gap: "0.8rem" },
-  mark: { fontSize: "clamp(0.95rem, 1.4vw, 1.5rem)", fontWeight: 800, letterSpacing: "0.03em" },
-  desc: { fontSize: "clamp(0.95rem, 1.4vw, 1.5rem)", color: "rgba(220,235,255,0.85)" },
+  mark: { fontSize: "clamp(1.1rem, 1.7vw, 1.9rem)", fontWeight: 800, letterSpacing: "0.03em" },
+  desc: { fontSize: "clamp(1.1rem, 1.7vw, 1.9rem)", color: "rgba(220,235,255,0.85)" },
   sumRow: {
     display: "flex",
     justifyContent: "space-between",

@@ -27,7 +27,7 @@ export const AXES = [
 // Default lowest per-axis score. Mirrors config.scoreFloor; kept here so the
 // scorer also works standalone. We add points on top of this floor (加点方式)
 // instead of deducting, so no photo is publicly humiliated.
-export const DEFAULT_FLOOR = 15;
+export const DEFAULT_FLOOR = 10;
 
 // Deterministic 0..1 hash from a string so the same image always scores the same.
 function seededRandom(seed) {
@@ -56,14 +56,16 @@ export function gradeFor(score) {
 // --- にぎやかさ（人数）軸の共有ロジック（AI判定・ダミー双方で使う） ----------
 // にぎやかさ軸の値(0..100)を、実際の人数だけで細かく決める。写り方や占有率では
 // 増減させない（純粋に頭数）。1人ごとに段差、多いほど高得点・多人数で頭打ち。
-//   0→20 / 1→34 / 2→46 / 3→56 / 4→65 / 5→72 / 6→78 / 7→83 / 8→87 / 9→90 / 10→93 / 11→95 / 12→97
+// 大人数（特に10人以上の集合写真）をしっかり優遇するカーブ:
+//   1人は控えめ、2〜5人はやや控えめ、6〜9人は標準、9→10で大きく伸ばし12〜13人で頭打ち。
+//   0→20 / 1→32 / 2→45 / 3→55 / 4→64 / 5→71 / 6→78 / 7→83 / 8→87 / 9→90 / 10→95 / 11→97 / 12→99
 const PEOPLE_COUNT_TABLE = {
-  1: 34, 2: 46, 3: 56, 4: 65, 5: 72, 6: 78, 7: 83, 8: 87, 9: 90, 10: 93, 11: 95, 12: 97,
+  1: 32, 2: 45, 3: 55, 4: 64, 5: 71, 6: 78, 7: 83, 8: 87, 9: 90, 10: 95, 11: 97, 12: 99,
 };
 export function peopleScoreFromCount(n) {
   if (!Number.isFinite(n) || n <= 0) return 20; // 祝う相手がいない
   if (n <= 12) return PEOPLE_COUNT_TABLE[n];
-  return Math.min(100, 97 + (n - 12)); // 13人以降は微増、100で頭打ち
+  return Math.min(100, 99 + (n - 12)); // 13人以降は微増、100で頭打ち
 }
 
 // 画像IDから決まる安定した擬似乱数で [-range, +range] のブレを返す。
@@ -83,8 +85,8 @@ export function seededJitter(seed, range) {
   return Math.round((r * 2 - 1) * range); // [-range, +range]
 }
 
-// 人数の“面白さ”ブレ幅（±5点）。
-export const PEOPLE_FUN_JITTER = 5;
+// 人数の“面白さ”ブレ幅（±3点）。
+export const PEOPLE_FUN_JITTER = 3;
 
 // 人数 → にぎやかさ軸の値(0..100)。素点＋画像ごとに安定した面白さブレ。
 export function peopleAxisValue(peopleCount, seed) {

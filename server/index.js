@@ -4,6 +4,10 @@ import { config } from "./config.js";
 import { createDriveProvider } from "./drive/index.js";
 import { createQueue } from "./queue.js";
 import { getSettings, setSheetWebhookUrl } from "./settings.js";
+import { fetchTopResults, resetSheet } from "./sheets/index.js";
+
+// 結果発表サムネ用の公開画像URL（google-public と同じ lh3 ホスト）。
+const resultImageUrl = (id) => `https://lh3.googleusercontent.com/d/${id}=w1600`;
 
 const provider = createDriveProvider();
 const queue = createQueue(provider);
@@ -52,6 +56,37 @@ app.post("/api/settings", (req, res) => {
   const { sheetWebhookUrl } = req.body ?? {};
   if (typeof sheetWebhookUrl === "string") setSheetWebhookUrl(sheetWebhookUrl);
   res.json(getSettings());
+});
+
+// 結果発表: シートのスキャン済み(C=true)の中から 合計スコア(B) 上位3件。
+app.get("/api/results", async (_req, res) => {
+  try {
+    const rows = await fetchTopResults(3);
+    const results = rows.map((r) => ({
+      imageId: r.id,
+      imageUrl: resultImageUrl(r.id),
+      score: r.score,
+      name: r.name || "",
+    }));
+    res.json({ results });
+  } catch (err) {
+    console.error("[results]", err.message);
+    res.status(502).json({ results: [], error: err.message });
+  }
+});
+
+// ランキング集計のリセット: シートをヘッダのみに戻し、サーバーの集計もクリアして
+// 1から再スキャン（再採点）する。
+app.post("/api/reset", async (_req, res) => {
+  try {
+    await resetSheet(); // 1) シートのデータ行を消去
+    queue.reset(); // 2) サーバーの seen / items をクリア
+    queue.poll().catch((err) => console.error("[reset] re-scan poll failed:", err.message)); // 3) 再スキャン開始
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[reset]", err.message);
+    res.status(502).json({ ok: false, error: err.message });
+  }
 });
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));

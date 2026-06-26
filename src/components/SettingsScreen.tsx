@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import {
   fetchServerDriveUrl,
   loadSavedDriveUrl,
   saveDriveUrl,
   fetchSheetWebhookUrl,
   saveSheetWebhookUrl,
+  resetRanking,
 } from "../lib/settings";
 
 // 設定画面。いま定義できるのは「ドライブのURL」だけ。
@@ -31,6 +33,9 @@ export default function SettingsScreen({ onBack }: { onBack: () => void }) {
   const [serverUrl, setServerUrl] = useState("");
   const [webhookUrl, setWebhookUrl] = useState("");
   const [saved, setSaved] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [resetError, setResetError] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -60,6 +65,20 @@ export default function SettingsScreen({ onBack }: { onBack: () => void }) {
     setWebhookUrl(url);
     setSaved(true);
     window.setTimeout(() => setSaved(false), 1800);
+  }
+
+  async function handleReset() {
+    setResetting(true);
+    setResetError("");
+    try {
+      await resetRanking();
+      // 集計もクライアントのカーソルも完全に初期化するため、トップへ全リロード。
+      window.location.href = "/";
+    } catch (err) {
+      setResetError(err instanceof Error ? err.message : "リセットに失敗しました");
+      setResetting(false);
+      setConfirming(false);
+    }
   }
 
   return (
@@ -132,6 +151,63 @@ export default function SettingsScreen({ onBack }: { onBack: () => void }) {
           {saved && <span style={styles.savedMsg}>保存しました ✓</span>}
         </div>
       </motion.div>
+
+      {/* ランキングのリセット */}
+      <motion.div style={styles.card} variants={itemVariants}>
+        <label style={styles.label}>ランキングをリセット</label>
+        <p style={styles.hint}>
+          シートのスキャン結果をすべて消去してヘッダのみに戻し、集計を1からやり直します。
+          全ての写真は再スキャン（再採点）されます。元には戻せません。
+        </p>
+        <div style={styles.actions}>
+          <button type="button" onClick={() => setConfirming(true)} style={styles.resetBtn}>
+            ランキングをリセット
+          </button>
+          {resetError && <span style={styles.errorMsg}>{resetError}</span>}
+        </div>
+      </motion.div>
+
+      {/* 確認ダイアログ（一度だけ） */}
+      <AnimatePresence>
+        {confirming && (
+          <motion.div
+            style={styles.modalBackdrop}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => !resetting && setConfirming(false)}
+          >
+            <motion.div
+              style={styles.modal}
+              initial={{ opacity: 0, scale: 0.9, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p style={styles.modalText}>本当にリセットしますか？</p>
+              <p style={styles.modalSub}>スキャン結果のシートが空になり、元には戻せません。</p>
+              <div style={styles.modalActions}>
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  disabled={resetting}
+                  style={{ ...styles.resetBtn, opacity: resetting ? 0.6 : 1 }}
+                >
+                  {resetting ? "リセット中…" : "OK"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirming(false)}
+                  disabled={resetting}
+                  style={styles.cancelBtn}
+                >
+                  いいえ
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
@@ -143,6 +219,8 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: "column",
     padding: "clamp(1.5rem, 4vh, 3rem) clamp(2rem, 5vw, 5rem)",
     gap: "clamp(1.2rem, 3vh, 2.4rem)",
+    // 内容が画面より高いときはスクロールできるように。
+    overflowY: "auto",
   },
   back: {
     alignSelf: "flex-start",
@@ -167,6 +245,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   card: {
     width: "100%",
+    flexShrink: 0,
     display: "flex",
     flexDirection: "column",
     gap: "0.7rem",
@@ -210,4 +289,56 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "var(--font)",
   },
   savedMsg: { fontSize: "0.95rem", color: "var(--blue-glow)", fontWeight: 600 },
+
+  // リセット（危険操作）
+  resetBtn: {
+    padding: "0.7rem 1.6rem",
+    fontSize: "1rem",
+    fontWeight: 700,
+    color: "#fff",
+    background: "linear-gradient(180deg, #ff6b6b, #e03131)",
+    border: "none",
+    borderRadius: 999,
+    cursor: "pointer",
+    boxShadow: "0 8px 24px rgba(224,49,49,0.35)",
+    fontFamily: "var(--font)",
+  },
+  cancelBtn: {
+    padding: "0.7rem 1.6rem",
+    fontSize: "1rem",
+    fontWeight: 700,
+    color: "var(--text)",
+    background: "rgba(120,170,255,0.1)",
+    border: "1px solid var(--line)",
+    borderRadius: 999,
+    cursor: "pointer",
+    fontFamily: "var(--font)",
+  },
+  errorMsg: { fontSize: "0.95rem", color: "#ff8787", fontWeight: 600 },
+
+  // 確認モーダル
+  modalBackdrop: {
+    position: "fixed",
+    inset: 0,
+    zIndex: 50,
+    display: "grid",
+    placeItems: "center",
+    background: "rgba(2,4,12,0.7)",
+    backdropFilter: "blur(4px)",
+  },
+  modal: {
+    width: "min(440px, 90vw)",
+    display: "flex",
+    flexDirection: "column",
+    gap: "0.6rem",
+    padding: "clamp(1.4rem, 3vh, 2.2rem)",
+    borderRadius: 20,
+    border: "1px solid var(--line)",
+    background: "linear-gradient(180deg, rgba(18,26,50,0.98), rgba(8,12,24,0.98))",
+    boxShadow: "0 30px 80px rgba(0,0,0,0.6)",
+    textAlign: "center",
+  },
+  modalText: { fontSize: "clamp(1.2rem, 2.2vw, 1.6rem)", fontWeight: 800, color: "var(--text)" },
+  modalSub: { fontSize: "0.9rem", color: "var(--text-dim)", lineHeight: 1.5 },
+  modalActions: { display: "flex", justifyContent: "center", gap: "1rem", marginTop: "0.8rem" },
 };

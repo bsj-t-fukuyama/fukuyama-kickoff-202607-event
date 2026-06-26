@@ -98,7 +98,7 @@ function biasFromSignals(values, s, seed) {
   const v = { ...values };
 
   // にぎやかさ軸は“実際の人数”だけで決める（占有率や写り方は無視）。
-  // 人数の細かいレンジ + 画像ごとに安定した ±5点 の面白さブレを乗せる。
+  // 人数の細かいレンジ + 画像ごとに安定した ±3点 の面白さブレを乗せる。
   if (Number.isFinite(s.peopleCount)) {
     v.people = peopleAxisValue(s.peopleCount, seed);
   } else if (s.multiplePeople) {

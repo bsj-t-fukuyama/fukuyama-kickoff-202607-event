@@ -33,14 +33,14 @@ export const config = {
 
   // Google Drive settings (only used when driveProvider === "google").
   google: {
-    folderId: process.env.DRIVE_FOLDER_ID ?? "1Zv2dSHqLw7D-UPUcCNSmUrY3B410yLER",
+    folderId: process.env.DRIVE_FOLDER_ID ?? "",
     // Path to a service-account JSON key. The service account must have the
     // folder shared with it (Viewer is enough).
     credentialsPath: process.env.GOOGLE_APPLICATION_CREDENTIALS ?? "",
   },
 
   // Google Sheet used as a tiny DB for scan results (keyed by image id).
-  // Columns: A=画像id B=合計スコア C=スキャン済みフラグ D=(空) E=user名 F=画像名。
+  // Columns: A=画像id B=合計スコア C=スキャン済みフラグ D=user名 E=画像名。
   //
   // 書き込み方法は2通り（どちらか一方でOK）:
   //   1) Apps Script Web App（推奨・課金/サービスアカウント不要）:
@@ -49,12 +49,10 @@ export const config = {
   //        サービスアカウントに「編集者」で共有。
   // どちらも無ければ保存は自動的に無効（採点は通常どおり動作）。SHEET_SYNC=off で明示無効化。
   sheets: {
-    spreadsheetId: process.env.SHEET_ID ?? "1WVjDUq_F5NQgXn50KeoURIiC7Jho68QxO1kp84n2jeY",
+    spreadsheetId: process.env.SHEET_ID ?? "",
     credentialsPath: process.env.GOOGLE_APPLICATION_CREDENTIALS ?? "",
-    // 既定の保存先 Web App URL。/settings から上書き保存でき、env でも上書き可能。
-    webhookUrl:
-      process.env.SHEET_WEBHOOK_URL ??
-      "https://script.google.com/macros/s/AKfycbyyhmWxs1wRFr8Q-Xjzy4h7eGMUJeuTV9-12yEOrh9-GmkvIFEusaW9NT4kpFZ_3hhQ/exec",
+    // 保存先 Web App URL。秘匿情報なのでリポジトリには置かず .env / /settings で管理。
+    webhookUrl: process.env.SHEET_WEBHOOK_URL ?? "",
     webhookToken: process.env.SHEET_WEBHOOK_TOKEN ?? "",
     enabled: (process.env.SHEET_SYNC ?? "auto") !== "off",
   },
@@ -85,9 +83,9 @@ export const config = {
 
   // Lowest possible per-axis score. We never deduct below this floor so no photo
   // gets publicly humiliated — every shot starts from here and earns points up.
-  // Floor 15 keeps every total at or above 15 while leaving a wide spread of
-  // possible scores (15〜100) so good and great shots pull clearly apart.
-  scoreFloor: Number(process.env.FLOOR ?? 15),
+  // Floor 10 keeps every total at or above 10 while leaving a wide spread of
+  // possible scores (10〜100) so good and great shots pull clearly apart.
+  scoreFloor: Number(process.env.FLOOR ?? 10),
 
   // Scorer selection:
   //   "ai"    – Claude vision judges the real pixels (server/scorer/aiScorer.js)
