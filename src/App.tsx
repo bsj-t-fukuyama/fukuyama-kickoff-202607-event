@@ -12,6 +12,7 @@ import SkipButton from "./components/SkipButton";
 import PrevButton from "./components/PrevButton";
 import SettingsScreen from "./components/SettingsScreen";
 import SettingsButton from "./components/SettingsButton";
+import PostUpload from "./components/PostUpload";
 import NotFound from "./components/NotFound";
 
 const SCORING_MS = 10_000; // one judging animation
@@ -75,6 +76,8 @@ export default function App() {
             ) : (
               <IdleScreen stats={follower.stats} hideStats />
             )}
+            {/* 参加者は右下のボタンからスマホの写真を投稿できる。 */}
+            <PostUpload />
           </motion.div>
         ) : onMain ? (
           <motion.div

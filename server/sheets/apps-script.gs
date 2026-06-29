@@ -17,6 +17,11 @@
  *       SHEET_WEBHOOK_TOKEN=（3で設定したなら同じ値。未設定なら空のままでOK）
  *
  *  ※ コードを修正したら「デプロイを管理」→ 鉛筆 → バージョン「新規」で再デプロイ（URLは不変）。
+ *
+ * ▼ 写真投稿機能（/view からの action:"upload"）について
+ *   この版は参加者がスマホから選んだ写真を DRIVE_FOLDER_ID のフォルダへ保存する。
+ *   Drive への書き込み権限が要るので、貼り替え後の初回保存/再デプロイ時に表示される
+ *   「Drive へのアクセスを許可」を承認すること（承認しないと upload は失敗する）。
  */
 
 // 任意の共有シークレット。空文字なら認証チェックなし。
@@ -28,6 +33,28 @@ function doPost(e) {
 
     if (SHEET_TOKEN && body.token !== SHEET_TOKEN) {
       return json_({ ok: false, error: "unauthorized" });
+    }
+
+    // 写真投稿: 参加者(/view)がスマホから選んだ画像を Drive フォルダへ保存する。
+    // base64 を Blob 化して folderId のフォルダに作成し、誰でも閲覧可（=google-public
+    // が拾える）に共有設定する。※この機能を使うには Apps Script に Drive 権限が必要なので、
+    // 貼り替え後の初回実行/再デプロイ時に表示される認可を許可すること。
+    if (body.action === "upload") {
+      var folderId = String(body.folderId || "");
+      if (!folderId) return json_({ ok: false, error: "missing folderId" });
+      var data = String(body.data || "");
+      if (!data) return json_({ ok: false, error: "missing data" });
+      var mimeType = String(body.mimeType || "image/jpeg");
+      var name = String(body.name || "upload_" + new Date().getTime() + ".jpg");
+      var bytes = Utilities.base64Decode(data);
+      var blob = Utilities.newBlob(bytes, mimeType, name);
+      var file = DriveApp.getFolderById(folderId).createFile(blob);
+      try {
+        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      } catch (shErr) {
+        // 共有設定に失敗しても作成自体は成功扱い（フォルダ側の公開設定で見える場合あり）。
+      }
+      return json_({ ok: true, action: "upload", id: file.getId(), name: file.getName() });
     }
 
     // リセット: ヘッダ(1行目)以外のデータ行をすべて消去して元の状態に戻す。

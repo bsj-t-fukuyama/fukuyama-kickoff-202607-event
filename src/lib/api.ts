@@ -78,3 +78,19 @@ export async function fetchPresentation(): Promise<Presentation> {
   if (!res.ok) throw new Error(`/api/presentation ${res.status}`);
   return res.json();
 }
+
+// --- 参加者の写真投稿（/view → Drive フォルダ） -----------------------------
+export async function uploadPhoto(input: {
+  name: string;
+  mimeType: string;
+  data: string; // base64（dataURL のヘッダを除いた本体）
+}): Promise<{ id?: string; name?: string }> {
+  const res = await fetch("/api/upload", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.ok === false) throw new Error(data.error || `/api/upload ${res.status}`);
+  return data;
+}

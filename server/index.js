@@ -7,6 +7,7 @@ import { createDriveProvider } from "./drive/index.js";
 import { createQueue } from "./queue.js";
 import { getSettings, setSheetWebhookUrl } from "./settings.js";
 import { fetchTopResults, resetSheet } from "./sheets/index.js";
+import { uploadToDrive } from "./upload.js";
 
 // 結果発表サムネ用の公開画像URL（google-public と同じ lh3 ホスト）。
 const resultImageUrl = (id) => `https://lh3.googleusercontent.com/d/${id}=w1600`;
@@ -16,7 +17,8 @@ const queue = createQueue(provider);
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+// 参加者がアップする写真(base64)を受けるため上限を上げる（圧縮済みでも数MB想定）。
+app.use(express.json({ limit: "25mb" }));
 
 // Next unscanned image after the given cursor (-1 to start from the beginning).
 app.get("/api/next", (req, res) => {
@@ -114,6 +116,18 @@ app.post("/api/presentation", (req, res) => {
 app.get("/api/presentation", (_req, res) => {
   if (!presentation) return res.json({ index: null, now: Date.now() });
   res.json({ index: presentation.index, startedAt: presentation.startedAt, now: Date.now() });
+});
+
+// 参加者(/view)がスマホから選んだ写真を Drive フォルダへ投稿する。
+app.post("/api/upload", async (req, res) => {
+  try {
+    const { name, mimeType, data } = req.body ?? {};
+    const result = await uploadToDrive({ name, mimeType, base64: data });
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    console.error("[upload]", err.message);
+    res.status(502).json({ ok: false, error: err.message });
+  }
 });
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
