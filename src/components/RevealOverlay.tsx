@@ -87,7 +87,7 @@ const styles: Record<string, React.CSSProperties> = {
   // モバイル: 横の余白は無し、スポットライトは中央、下に内訳シート用の余白を確保。
   backdropCompact: {
     paddingRight: "4vmin",
-    paddingBottom: "46vh",
+    paddingBottom: "36vh",
     background:
       "radial-gradient(circle at 50% 34%, rgba(10,20,45,0.55) 0%, rgba(2,4,12,0.82) 60%, rgba(0,0,0,0.92) 100%)",
   },

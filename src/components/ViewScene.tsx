@@ -119,7 +119,7 @@ const rowVariants = {
 };
 
 function MobileBreakdown({ item, revealed }: { item: ScoredItem; revealed: boolean }) {
-  const { rows, points } = computeBreakdown(item);
+  const { rows } = computeBreakdown(item);
   const s = item.signals;
 
   return (
@@ -134,16 +134,6 @@ function MobileBreakdown({ item, revealed }: { item: ScoredItem; revealed: boole
           exit="exit"
         >
           <div style={sheetStyles.grip} />
-          <motion.div style={sheetStyles.header} variants={rowVariants}>
-            <span style={sheetStyles.title}>判定の内訳</span>
-            <span style={sheetStyles.totalWrap}>
-              <span className="tnum" style={sheetStyles.totalScore}>
-                {item.score}
-              </span>
-              <span style={sheetStyles.gradeTag}>{item.grade}</span>
-            </span>
-          </motion.div>
-
           {rows.map((row) => (
             <motion.div key={row.key} style={sheetStyles.block} variants={rowVariants}>
               <div style={sheetStyles.axisTop}>
@@ -178,17 +168,6 @@ function MobileBreakdown({ item, revealed }: { item: ScoredItem; revealed: boole
               </div>
             </motion.div>
           ))}
-
-          <motion.div style={sheetStyles.sumRow} variants={rowVariants}>
-            <span style={sheetStyles.sumLabel}>4軸の合計</span>
-            <span style={sheetStyles.sumExpr}>
-              {points.join(" + ")} ={" "}
-              <span className="tnum" style={sheetStyles.sumTotal}>
-                {item.score}
-              </span>
-              <span style={sheetStyles.sumUnit}>点</span>
-            </span>
-          </motion.div>
         </motion.aside>
       )}
     </AnimatePresence>
@@ -260,33 +239,6 @@ const sheetStyles: Record<string, React.CSSProperties> = {
     alignSelf: "center",
     marginBottom: "0.2rem",
   },
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "baseline",
-    gap: "0.8rem",
-    paddingBottom: "0.5rem",
-    borderBottom: "1px solid rgba(120,170,255,0.18)",
-  },
-  title: {
-    fontSize: "clamp(1.1rem, 4.5vw, 1.5rem)",
-    fontWeight: 800,
-    letterSpacing: "0.03em",
-    background: "linear-gradient(180deg, #fff, var(--blue-glow))",
-    WebkitBackgroundClip: "text",
-    WebkitTextFillColor: "transparent",
-  },
-  totalWrap: { display: "flex", alignItems: "baseline", gap: "0.4rem" },
-  totalScore: {
-    fontSize: "clamp(2rem, 9vw, 3rem)",
-    fontWeight: 900,
-    lineHeight: 0.9,
-    letterSpacing: "-0.03em",
-    background: "linear-gradient(180deg, #ffffff, #9fd2ff)",
-    WebkitBackgroundClip: "text",
-    WebkitTextFillColor: "transparent",
-  },
-  gradeTag: { fontSize: "clamp(1.1rem, 5vw, 1.7rem)", fontWeight: 900, color: "var(--blue-glow)" },
   block: { display: "grid", gap: "0.3rem" },
   axisTop: { display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "0.6rem" },
   axisName: { fontSize: "clamp(1rem, 4.4vw, 1.4rem)", fontWeight: 700, color: "var(--text)" },
@@ -318,18 +270,4 @@ const sheetStyles: Record<string, React.CSSProperties> = {
   descRow: { display: "flex", alignItems: "baseline", gap: "0.6rem", flexWrap: "wrap" },
   mark: { fontSize: "clamp(0.78rem, 3.2vw, 1.05rem)", fontWeight: 800, letterSpacing: "0.02em" },
   desc: { fontSize: "clamp(0.78rem, 3.2vw, 1.05rem)", color: "rgba(220,235,255,0.85)" },
-  sumRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "baseline",
-    gap: "0.6rem",
-    padding: "0.6rem 0.9rem",
-    borderRadius: 12,
-    background: "rgba(1,153,255,0.12)",
-    border: "1px solid rgba(56,182,255,0.3)",
-  },
-  sumLabel: { fontSize: "clamp(0.85rem, 3.6vw, 1.15rem)", fontWeight: 700, color: "var(--text)" },
-  sumExpr: { fontSize: "clamp(0.7rem, 3vw, 1rem)", color: "var(--text-dim)" },
-  sumTotal: { fontSize: "clamp(1.2rem, 5.5vw, 1.8rem)", fontWeight: 900, color: "var(--blue-glow)" },
-  sumUnit: { fontSize: "clamp(0.85rem, 3.6vw, 1.15rem)", color: "var(--blue-glow)" },
 };

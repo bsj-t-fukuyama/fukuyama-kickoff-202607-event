@@ -72,8 +72,8 @@ export default function SettingsScreen({ onBack }: { onBack: () => void }) {
     setResetError("");
     try {
       await resetRanking();
-      // 集計もクライアントのカーソルも完全に初期化するため、トップへ全リロード。
-      window.location.href = "/";
+      // 集計もクライアントのカーソルも完全に初期化するため、メイン画面へ全リロード。
+      window.location.href = "/main";
     } catch (err) {
       setResetError(err instanceof Error ? err.message : "リセットに失敗しました");
       setResetting(false);
