@@ -2,43 +2,47 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { motion } from "framer-motion";
 import { fetchResults, PODIUM_SIZE, type ResultEntry } from "../lib/results";
 
-// 結果発表（暫定）画面。
+// 結果発表（暫定）画面。上位6件を表示する。
 //
 // レイアウト:
-//   ・1位 … 画面の左半分を丸ごと使い、正方形エリアに写真を最大表示。
-//            その下に 順位 と 得点 を近づけて並べる。
-//   ・2位 … 右半分の上 / 3位 … 右半分の下。
-// データが足りない順位は「空いてます」のプレースホルダを出す。
-// データは lib/results.fetchResults()（今はダミー、将来はスプレッドシート集計API）。
+//   ・PC（横長）… 最初の画面に 1位（左半分）＋ 2位/3位（右半分の上下）。下へスクロール
+//                 すると 4〜6位 が同じ構図のままコンパクトに左→右で3つ並ぶ。
+//   ・スマホ（縦長）… 全順位がカードとして 1位→6位 に上から積み上がる（縦スクロール）。
+// 足りない順位は「空いてます」のプレースホルダ。
+// 各カードの順位/得点の文字はコンテナクエリ(cqw)でカード幅に応じて自動スケールする。
 
-// 順位ごとのアクセント（金・銀・銅）。
+// 順位ごとのアクセント（金・銀・銅 → 4位以降は青系）。
 const MEDALS = [
-  { label: "1位", color: "#ffd24d", glow: "rgba(255,210,77,0.55)", crown: "👑" },
-  { label: "2位", color: "#cfe0ff", glow: "rgba(207,224,255,0.45)", crown: "🥈" },
-  { label: "3位", color: "#ff9d5c", glow: "rgba(255,157,92,0.45)", crown: "🥉" },
+  { label: "1位", color: "#ffd24d", glow: "rgba(255,210,77,0.5)", crown: "👑" },
+  { label: "2位", color: "#cfe0ff", glow: "rgba(207,224,255,0.4)", crown: "🥈" },
+  { label: "3位", color: "#ff9d5c", glow: "rgba(255,157,92,0.4)", crown: "🥉" },
+  { label: "4位", color: "#8fb8e6", glow: "rgba(143,184,230,0.35)", crown: "" },
+  { label: "5位", color: "#8fb8e6", glow: "rgba(143,184,230,0.35)", crown: "" },
+  { label: "6位", color: "#8fb8e6", glow: "rgba(143,184,230,0.35)", crown: "" },
 ];
 
 const screenVariants = {
   hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { when: "beforeChildren" as const, staggerChildren: 0.14, delayChildren: 0.1 },
-  },
+  visible: { opacity: 1, transition: { when: "beforeChildren" as const, staggerChildren: 0.06 } },
   exit: { opacity: 0, transition: { duration: 0.25 } },
 };
 
-const fromLeft = {
-  hidden: { opacity: 0, x: -70, scale: 0.94 },
-  visible: { opacity: 1, x: 0, scale: 1, transition: { type: "spring" as const, stiffness: 200, damping: 24 } },
-};
-
-const fromRight = {
-  hidden: { opacity: 0, x: 70, scale: 0.96 },
-  visible: { opacity: 1, x: 0, scale: 1, transition: { type: "spring" as const, stiffness: 220, damping: 24 } },
-};
+// 横幅でPC/スマホを判定（リサイズ追従）。
+function useIsMobile(breakpoint = 820) {
+  const [mobile, setMobile] = useState(
+    () => typeof window !== "undefined" && window.innerWidth <= breakpoint,
+  );
+  useEffect(() => {
+    const onResize = () => setMobile(window.innerWidth <= breakpoint);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [breakpoint]);
+  return mobile;
+}
 
 export default function ResultScreen({ onBack }: { onBack: () => void }) {
   const [entries, setEntries] = useState<ResultEntry[] | null>(null);
+  const mobile = useIsMobile();
 
   useEffect(() => {
     let alive = true;
@@ -65,145 +69,98 @@ export default function ResultScreen({ onBack }: { onBack: () => void }) {
       animate="visible"
       exit="exit"
     >
-      <motion.button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onBack();
-        }}
-        style={styles.back}
-        variants={fromLeft}
-        whileHover={{ x: -4 }}
-        aria-label="採点画面に戻る"
-      >
-        ← 採点画面へ
-      </motion.button>
-
-      <motion.div style={styles.header} variants={fromLeft}>
+      <div style={styles.topBar}>
+        <motion.button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onBack();
+          }}
+          style={styles.back}
+          whileHover={{ x: -4 }}
+          aria-label="採点画面に戻る"
+        >
+          ← 採点画面へ
+        </motion.button>
         <h1 style={styles.title}>結果発表（暫定）</h1>
-      </motion.div>
-
-      <div style={styles.stage}>
-        {/* 左半分: 1位 */}
-        <motion.div style={styles.leftCol} variants={fromLeft}>
-          <ChampionCard entry={slots[0]} loading={loading} />
-        </motion.div>
-
-        {/* 右半分: 2位（上） / 3位（下） */}
-        <div style={styles.rightCol}>
-          <RunnerUpCard rank={1} entry={slots[1]} loading={loading} />
-          <RunnerUpCard rank={2} entry={slots[2]} loading={loading} />
-        </div>
+        <span style={styles.topBarSpacer} />
       </div>
+
+      {mobile ? (
+        // --- スマホ: 1位→6位 を縦に積み上げる ---
+        <div style={styles.mobileStack}>
+          {slots.map((entry, i) => (
+            <Cell
+              key={i}
+              rank={i}
+              delay={i * 0.05}
+              style={{ height: i === 0 ? "58dvh" : i <= 2 ? "46dvh" : "40dvh" }}
+            >
+              <ResultCard rank={i} entry={entry} loading={loading} />
+            </Cell>
+          ))}
+        </div>
+      ) : (
+        // --- PC: 1位(左) + 2/3位(右) を1画面、スクロールで 4〜6位 ---
+        <>
+          <div style={styles.podium}>
+            <Cell rank={0} delay={0} style={styles.leftCol}>
+              <ResultCard rank={0} entry={slots[0]} loading={loading} />
+            </Cell>
+            <div style={styles.rightCol}>
+              <Cell rank={1} delay={0.06}>
+                <ResultCard rank={1} entry={slots[1]} loading={loading} />
+              </Cell>
+              <Cell rank={2} delay={0.12}>
+                <ResultCard rank={2} entry={slots[2]} loading={loading} />
+              </Cell>
+            </div>
+          </div>
+
+          <div style={styles.lowerSection}>
+            <div style={styles.lowerTitle}>4〜6位</div>
+            <div style={styles.lowerGrid}>
+              {[3, 4, 5].map((r, k) => (
+                <Cell key={r} rank={r} delay={0.05 * k}>
+                  <ResultCard rank={r} entry={slots[r]} loading={loading} />
+                </Cell>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
     </motion.div>
   );
 }
 
-// 1位: 写真を左半分いっぱいに実アスペクト比でベストフィット表示。
-// 順位は左上、得点は右下に、写真の上位レイヤーとしてオーバーレイ。
-function ChampionCard({ entry, loading }: { entry: ResultEntry | null; loading: boolean }) {
-  const medal = MEDALS[0];
-  const empty = !entry;
-
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const ratioRef = useRef<number | null>(null);
-  const [box, setBox] = useState<{ w: number; h: number } | null>(null);
-
-  const recompute = useCallback(() => {
-    const el = wrapRef.current;
-    const ratio = ratioRef.current;
-    if (!el || !ratio) return;
-    const cw = el.clientWidth;
-    const ch = el.clientHeight;
-    if (!cw || !ch) return;
-    let w = cw;
-    let h = cw / ratio;
-    if (h > ch) {
-      h = ch;
-      w = ch * ratio;
-    }
-    setBox({ w: Math.round(w), h: Math.round(h) });
-  }, []);
-
-  const onImgLoad = useCallback(
-    (e: React.SyntheticEvent<HTMLImageElement>) => {
-      const img = e.currentTarget;
-      if (img.naturalWidth && img.naturalHeight) {
-        ratioRef.current = img.naturalWidth / img.naturalHeight;
-        recompute();
-      }
-    },
-    [recompute],
-  );
-
-  useLayoutEffect(() => {
-    recompute();
-    const el = wrapRef.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(recompute);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [recompute]);
-
-  const frameSize: React.CSSProperties = box
-    ? { width: box.w, height: box.h }
-    : { width: "auto", height: "100%", aspectRatio: "1 / 1" };
-
+// 各カードの入場アニメ＋セル領域。ResultCard はこのセルいっぱいに写真をベストフィットする。
+function Cell({
+  rank,
+  delay,
+  style,
+  children,
+}: {
+  rank: number;
+  delay: number;
+  style?: React.CSSProperties;
+  children: React.ReactNode;
+}) {
   return (
-    <div ref={wrapRef} style={styles.champCard}>
-      {empty ? (
-        <div style={{ ...styles.emptySquare, ...styles.champFrame, width: "min(100%, 64vh)", height: "100%" }}>
-          <span style={styles.champCrown}>{medal.crown}</span>
-          <span style={{ ...styles.champRank, color: medal.color }}>{medal.label}</span>
-          <span style={styles.emptyText}>{loading ? "…" : "空いてます"}</span>
-        </div>
-      ) : (
-        <div
-          style={{
-            ...styles.champFrame,
-            ...frameSize,
-            boxShadow: `0 0 0 3px ${medal.color}, 0 26px 80px ${medal.glow}`,
-          }}
-        >
-          <img src={entry.imageUrl} alt={entry.name ?? entry.imageId} style={styles.img} onLoad={onImgLoad} />
-          <span style={{ ...styles.frameBracket, ...styles.fbTL, borderColor: medal.color, width: 34, height: 34 }} />
-          <span style={{ ...styles.frameBracket, ...styles.fbBR, borderColor: medal.color, width: 34, height: 34 }} />
-
-          {/* 順位（左上の端） */}
-          <div style={styles.champRankBadge}>
-            <span style={styles.champCrown}>{medal.crown}</span>
-            <span style={{ ...styles.champRank, color: medal.color, textShadow: "0 2px 10px rgba(0,0,0,0.85)" }}>
-              {medal.label}
-            </span>
-          </div>
-
-          {/* 得点（右下の端） */}
-          <motion.div
-            style={styles.champScoreBadge}
-            initial={{ opacity: 0, scale: 0.6 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ type: "spring", stiffness: 260, damping: 18, delay: 0.25 }}
-          >
-            <span className="tnum" style={{ ...styles.champScore, color: medal.color }}>
-              {entry.score}
-            </span>
-            <span style={styles.champScoreUnit}>点</span>
-          </motion.div>
-
-          {entry.name && (
-            <div style={styles.champCaption} className="mono">
-              {entry.name}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+    <motion.div
+      style={{ ...styles.cell, ...style }}
+      initial={{ opacity: 0, y: 22, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ type: "spring", stiffness: 200, damping: 24, delay }}
+      data-rank={rank}
+    >
+      {children}
+    </motion.div>
   );
 }
 
-// 2位・3位: 写真を主役にカードいっぱいへ実アスペクト比でベストフィット表示
-// （横写真は横に大きく、縦写真は縦に）。順位と得点は写真の端にオーバーレイ。
-function RunnerUpCard({
+// 写真を実アスペクト比でセルにベストフィットし、順位・得点・名前を端にオーバーレイ。
+// 文字サイズはコンテナクエリ(cqw)でカード幅に追従するので、大小どのカードでも同じ構図。
+function ResultCard({
   rank,
   entry,
   loading,
@@ -219,7 +176,6 @@ function RunnerUpCard({
   const ratioRef = useRef<number | null>(null);
   const [box, setBox] = useState<{ w: number; h: number } | null>(null);
 
-  // カード領域(cw×ch)に、写真比率を保ったまま最大で収まる箱を計算。
   const recompute = useCallback(() => {
     const el = wrapRef.current;
     const ratio = ratioRef.current;
@@ -261,99 +217,100 @@ function RunnerUpCard({
     : { width: "auto", height: "100%", aspectRatio: "4 / 3" };
 
   return (
-    <motion.div
-      ref={wrapRef}
-      style={{
-        ...styles.runnerCard,
-        borderColor: empty ? "var(--line)" : `${medal.color}66`,
-        boxShadow: empty ? "none" : `0 0 0 1px ${medal.color}33, 0 16px 50px ${medal.glow}`,
-      }}
-      variants={fromRight}
-    >
+    <div ref={wrapRef} style={styles.cardWrap}>
       {empty ? (
-        <div style={{ ...styles.emptySquare, ...styles.runnerFrame, width: "min(100%, 40vh)", height: "100%" }}>
-          <div style={styles.runnerRankRow}>
-            <span style={styles.runnerCrown}>{medal.crown}</span>
-            <span style={{ ...styles.runnerRank, color: medal.color }}>{medal.label}</span>
+        <div style={{ ...styles.frame, ...styles.emptyFrame, width: "min(100%, 60vh)", height: "100%" }}>
+          <div style={styles.rankRow}>
+            {medal.crown && <span style={styles.crown}>{medal.crown}</span>}
+            <span style={{ ...styles.rank, color: medal.color }}>{medal.label}</span>
           </div>
           <span style={styles.emptyText}>{loading ? "…" : "空いてます"}</span>
         </div>
       ) : (
-        <div style={{ ...styles.runnerFrame, ...frameSize, boxShadow: `0 0 0 2px ${medal.color}99` }}>
+        <div
+          style={{
+            ...styles.frame,
+            ...frameSize,
+            boxShadow: `0 0 0 2px ${medal.color}, 0 18px 60px ${medal.glow}`,
+          }}
+        >
           <img src={entry.imageUrl} alt={entry.name ?? entry.imageId} style={styles.img} onLoad={onImgLoad} />
 
-          {/* 順位（左上の端） */}
-          <div style={styles.runnerRankBadge}>
-            <span style={styles.runnerCrown}>{medal.crown}</span>
-            <span style={{ ...styles.runnerRank, color: medal.color, textShadow: "0 2px 8px rgba(0,0,0,0.85)" }}>
+          {/* 順位（左上） */}
+          <div style={styles.rankBadge}>
+            {medal.crown && <span style={styles.crown}>{medal.crown}</span>}
+            <span style={{ ...styles.rank, color: medal.color, textShadow: "0 2px 10px rgba(0,0,0,0.85)" }}>
               {medal.label}
             </span>
           </div>
 
-          {/* 得点（右下の端） */}
-          <motion.div
-            style={styles.runnerScoreBadge}
-            initial={{ opacity: 0, scale: 0.6 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ type: "spring", stiffness: 260, damping: 18, delay: 0.2 }}
-          >
-            <span className="tnum" style={{ ...styles.runnerScore, color: medal.color }}>
+          {/* 得点（右下） */}
+          <div style={styles.scoreBadge}>
+            <span className="tnum" style={{ ...styles.score, color: medal.color }}>
               {entry.score}
             </span>
-            <span style={styles.runnerScoreUnit}>点</span>
-          </motion.div>
+            <span style={styles.scoreUnit}>点</span>
+          </div>
 
           {entry.name && (
-            <div style={styles.runnerCaption} className="mono">
+            <div style={styles.caption} className="mono">
               {entry.name}
             </div>
           )}
         </div>
       )}
-    </motion.div>
+    </div>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
   root: {
     height: "100%",
+    overflowY: "auto",
     display: "flex",
     flexDirection: "column",
     padding: "clamp(0.5rem, 1.2vh, 1rem) clamp(0.6rem, 1.6vw, 1.6rem)",
-    gap: "clamp(0.3rem, 0.8vh, 0.6rem)",
+    gap: "clamp(0.4rem, 1vh, 0.8rem)",
+  },
+  topBar: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "1rem",
   },
   back: {
-    alignSelf: "flex-start",
     background: "rgba(120,170,255,0.08)",
     border: "1px solid var(--line)",
     color: "var(--text)",
     borderRadius: 999,
-    padding: "0.55rem 1.1rem",
-    fontSize: "0.9rem",
+    padding: "0.5rem 1rem",
+    fontSize: "0.85rem",
     letterSpacing: "0.08em",
     cursor: "inherit",
     fontFamily: "var(--font)",
+    whiteSpace: "nowrap",
   },
-  header: { textAlign: "center" },
   title: {
     fontSize: "clamp(1.1rem, 2vw, 1.8rem)",
     fontWeight: 800,
     letterSpacing: "-0.02em",
+    textAlign: "center",
     background: "linear-gradient(180deg, #fff, var(--blue-glow))",
     WebkitBackgroundClip: "text",
     WebkitTextFillColor: "transparent",
   },
+  topBarSpacer: { width: 96 },
 
-  // 左半分 / 右半分
-  stage: {
-    flex: 1,
-    minHeight: 0,
+  // --- PC: 1画面ぶんの表彰台（1位+2/3位） ---
+  podium: {
+    flexShrink: 0,
+    height: "calc(100dvh - 5.5rem)",
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
     gap: "clamp(0.5rem, 1.2vw, 1.2rem)",
     alignItems: "stretch",
   },
-  leftCol: { minWidth: 0, minHeight: 0, display: "flex" },
+  leftCol: { minWidth: 0, minHeight: 0 },
   rightCol: {
     minWidth: 0,
     minHeight: 0,
@@ -362,9 +319,47 @@ const styles: Record<string, React.CSSProperties> = {
     gap: "clamp(0.4rem, 1vh, 0.8rem)",
   },
 
-  // --- 1位（チャンピオン） ---
-  // 写真を左半分いっぱいにベストフィット。計測用コンテナとして中央にフレームを置く。
-  champCard: {
+  // --- PC: スクロールで現れる 4〜6位（コンパクトに3つ横並び） ---
+  lowerSection: {
+    flexShrink: 0,
+    paddingTop: "clamp(0.6rem, 1.4vh, 1.2rem)",
+    display: "flex",
+    flexDirection: "column",
+    gap: "clamp(0.4rem, 1vh, 0.8rem)",
+  },
+  lowerTitle: {
+    textAlign: "center",
+    fontSize: "clamp(0.95rem, 1.6vw, 1.4rem)",
+    fontWeight: 800,
+    letterSpacing: "0.06em",
+    color: "var(--blue-glow)",
+  },
+  lowerGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr 1fr",
+    gap: "clamp(0.5rem, 1.2vw, 1.2rem)",
+    height: "min(46dvh, 420px)",
+  },
+
+  // --- スマホ: 縦積み ---
+  mobileStack: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "clamp(0.7rem, 2vh, 1.2rem)",
+    paddingBottom: "calc(env(safe-area-inset-bottom) + 1rem)",
+  },
+
+  // 各セル（カードの置き場）。ResultCard がこの領域に写真をフィットさせる。
+  cell: {
+    minWidth: 0,
+    minHeight: 0,
+    display: "flex",
+    // 既定はグリッド/親いっぱい（PC）。スマホは呼び出し側で height を上書きする。
+    height: "100%",
+  },
+
+  // --- カード本体（共通） ---
+  cardWrap: {
     flex: 1,
     minWidth: 0,
     minHeight: 0,
@@ -372,48 +367,59 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center",
     justifyContent: "center",
   },
-  champFrame: {
+  frame: {
     position: "relative",
     maxWidth: "100%",
     maxHeight: "100%",
-    borderRadius: 22,
+    borderRadius: 18,
     overflow: "hidden",
     background: "#000",
-    // 空きスロット時の中身レイアウト用。
+    // 文字をカード幅基準でスケールさせるためのコンテナ。
+    containerType: "inline-size",
+  },
+  emptyFrame: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
     gap: "0.5rem",
+    border: "2px dashed rgba(120,170,255,0.3)",
+    background: "rgba(120,170,255,0.04)",
   },
-  // 順位（写真左上の端にオーバーレイ）。
-  champRankBadge: {
+  img: { width: "100%", height: "100%", objectFit: "cover", display: "block" },
+
+  // 端のオーバーレイ（cqw でカード幅に追従）。
+  rankBadge: {
     position: "absolute",
-    top: 16,
-    left: 18,
+    top: "4cqw",
+    left: "4cqw",
     display: "flex",
     alignItems: "center",
-    gap: "0.5rem",
+    gap: "0.35em",
     zIndex: 2,
   },
-  // 得点（写真右下の端にオーバーレイ）。
-  champScoreBadge: {
+  rankRow: { display: "flex", alignItems: "center", gap: "0.4rem" },
+  crown: { fontSize: "clamp(0.9rem, 9cqw, 3.2rem)", lineHeight: 1 },
+  rank: { fontSize: "clamp(1rem, 11cqw, 4rem)", fontWeight: 900, lineHeight: 1 },
+  scoreBadge: {
     position: "absolute",
-    right: 22,
-    bottom: 14,
+    right: "5cqw",
+    bottom: "3.5cqw",
     display: "flex",
     alignItems: "baseline",
-    gap: 6,
+    gap: "0.1em",
     zIndex: 2,
     textShadow: "0 3px 14px rgba(0,0,0,0.9), 0 0 26px rgba(0,0,0,0.7)",
   },
-  champCaption: {
+  score: { fontSize: "clamp(1.6rem, 26cqw, 8.1rem)", fontWeight: 900, lineHeight: 1 },
+  scoreUnit: { fontSize: "clamp(0.7rem, 6cqw, 2.2rem)", color: "rgba(230,240,255,0.85)" },
+  caption: {
     position: "absolute",
-    bottom: 16,
-    left: 18,
-    maxWidth: "55%",
-    fontSize: "clamp(0.75rem, 1.2vw, 1.05rem)",
-    letterSpacing: "0.05em",
+    bottom: "3.5cqw",
+    left: "4cqw",
+    maxWidth: "56%",
+    fontSize: "clamp(0.6rem, 4cqw, 1.05rem)",
+    letterSpacing: "0.04em",
     color: "rgba(230,240,255,0.95)",
     textShadow: "0 2px 8px rgba(0,0,0,0.9)",
     overflow: "hidden",
@@ -421,97 +427,6 @@ const styles: Record<string, React.CSSProperties> = {
     whiteSpace: "nowrap",
     zIndex: 2,
   },
-  champCrown: { fontSize: "clamp(1.8rem, 3.4vw, 3.2rem)", alignSelf: "center" },
-  champRank: { fontSize: "clamp(2.4rem, 4.6vw, 4rem)", fontWeight: 900, lineHeight: 1 },
-  // 1位の得点（写真上でも読めるよう影付き）。
-  champScore: { fontSize: "clamp(4.5rem, 9vw, 8.1rem)", fontWeight: 900, lineHeight: 1 },
-  champScoreUnit: { fontSize: "clamp(1.3rem, 2.4vw, 2.2rem)", color: "rgba(230,240,255,0.85)" },
-
-  // --- 2位・3位（ランナーアップ） ---
-  // 写真主役。カードは計測用コンテナとして中央にフレームを置く。
-  runnerCard: {
-    position: "relative",
-    minHeight: 0,
-    minWidth: 0,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "clamp(0.25rem, 0.6vh, 0.5rem)",
-    borderRadius: 18,
-    border: "1px solid var(--line)",
-    background: "linear-gradient(180deg, rgba(13,22,46,0.7), rgba(6,10,22,0.7))",
-    overflow: "hidden",
-  },
-  // 写真比率にフィットする実フレーム（順位・得点をこの上にオーバーレイ）。
-  runnerFrame: {
-    position: "relative",
-    maxWidth: "100%",
-    maxHeight: "100%",
-    borderRadius: 14,
-    overflow: "hidden",
-    background: "#000",
-    // 空きスロット時の中身レイアウト用。
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "0.4rem",
-  },
-  // 順位（写真左上の端にオーバーレイ）。
-  runnerRankBadge: {
-    position: "absolute",
-    top: 10,
-    left: 12,
-    display: "flex",
-    alignItems: "center",
-    gap: "0.35rem",
-    zIndex: 2,
-  },
-  // 得点（写真右下の端にオーバーレイ）。
-  runnerScoreBadge: {
-    position: "absolute",
-    right: 14,
-    bottom: 8,
-    display: "flex",
-    alignItems: "baseline",
-    gap: 4,
-    zIndex: 2,
-    textShadow: "0 2px 10px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.7)",
-  },
-  runnerCaption: {
-    position: "absolute",
-    bottom: 6,
-    left: 12,
-    maxWidth: "58%",
-    fontSize: "0.7rem",
-    letterSpacing: "0.04em",
-    color: "rgba(230,240,255,0.92)",
-    textShadow: "0 2px 8px rgba(0,0,0,0.9)",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-    zIndex: 2,
-  },
-  runnerRankRow: { display: "flex", alignItems: "center", gap: "0.4rem" },
-  runnerCrown: { fontSize: "clamp(1.3rem, 2.2vw, 2rem)" },
-  runnerRank: { fontSize: "clamp(1.6rem, 2.6vw, 2.6rem)", fontWeight: 900, lineHeight: 1 },
-  // 2位・3位の得点は大きく（写真上でも読めるよう影付き）。約1.4倍に拡大。
-  runnerScore: { fontSize: "clamp(4.8rem, 8.4vw, 8.1rem)", fontWeight: 900, lineHeight: 1 },
-  runnerScoreUnit: { fontSize: "clamp(1.3rem, 2.2vw, 2rem)", color: "rgba(230,240,255,0.85)" },
-
-  // --- 共有 ---
-  img: { width: "100%", height: "100%", objectFit: "cover", display: "block" },
-  frameBracket: { position: "absolute", border: "3px solid #fff" },
-  fbTL: { top: 12, left: 12, borderRight: "none", borderBottom: "none" },
-  fbBR: { bottom: 12, right: 12, borderLeft: "none", borderTop: "none" },
-  emptySquare: {
-    border: "2px dashed rgba(120,170,255,0.3)",
-    background: "rgba(120,170,255,0.04)",
-    display: "grid",
-    placeItems: "center",
-  },
-  emptyMark: { fontSize: "clamp(2.4rem, 5vw, 4rem)", color: "var(--text-dim)", fontWeight: 800 },
-  emptyMarkSm: { fontSize: "clamp(1.4rem, 3vw, 2.4rem)", color: "var(--text-dim)", fontWeight: 800 },
   emptyText: {
     fontSize: "clamp(1rem, 1.8vw, 1.5rem)",
     color: "var(--text-dim)",

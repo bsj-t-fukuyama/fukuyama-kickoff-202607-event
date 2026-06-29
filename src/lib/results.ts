@@ -1,6 +1,6 @@
 // 結果発表（暫定）画面のデータ。
 //
-// シート(DB)のスキャン済み(C=true)の中から 合計スコア(B) 上位3件をサーバー経由で取得する。
+// シート(DB)のスキャン済み(C=true)の中から 合計スコア(B) 上位6件をサーバー経由で取得する。
 // サーバーは GAS(Apps Script) の ?action=top を叩いて集計し、画像URLを付けて返す。
 
 export type ResultEntry = {
@@ -10,8 +10,8 @@ export type ResultEntry = {
   name?: string; // 画像名（シートF列）
 };
 
-// 表彰台のサイズ（上位3件）。空きは画面側で「空いてます」と表示する。
-export const PODIUM_SIZE = 3;
+// 結果発表の表示件数（上位6件）。空きは画面側で「空いてます」と表示する。
+export const PODIUM_SIZE = 6;
 
 // 暫定の上位 PODIUM_SIZE 件（スコア降順）を取得する。失敗時は空配列。
 export async function fetchResults(): Promise<ResultEntry[]> {

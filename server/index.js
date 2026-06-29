@@ -65,7 +65,7 @@ app.post("/api/settings", (req, res) => {
 // 結果発表: シートのスキャン済み(C=true)の中から 合計スコア(B) 上位3件。
 app.get("/api/results", async (_req, res) => {
   try {
-    const rows = await fetchTopResults(3);
+    const rows = await fetchTopResults(6);
     const results = rows.map((r) => ({
       imageId: r.id,
       imageUrl: resultImageUrl(r.id),
