@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { fetchResults, PODIUM_SIZE, type ResultEntry } from "../lib/results";
 
@@ -82,7 +82,7 @@ export default function ResultScreen({ onBack }: { onBack: () => void }) {
         >
           ← 採点画面へ
         </motion.button>
-        <h1 style={styles.title}>結果発表（暫定）</h1>
+        <h1 style={styles.title}>結果発表</h1>
         <span style={styles.topBarSpacer} />
       </div>
 
@@ -158,8 +158,19 @@ function Cell({
   );
 }
 
-// 写真を実アスペクト比でセルにベストフィットし、順位・得点・名前を端にオーバーレイ。
-// 文字サイズはコンテナクエリ(cqw)でカード幅に追従するので、大小どのカードでも同じ構図。
+// 写真はセルいっぱいに敷き詰める（cover）。縦写真・横写真どちらでも余白(隙間)が
+// 増えず、順位＝カードの大きさで自然に序列が伝わる。順位・得点・名前は端にオーバーレイし、
+// 文字サイズはコンテナクエリ(cqw)でカード幅に追従するので、大小どのカードも同じ構図。
+// 上位ほど枠を太く・強く光らせて“順位のグラデーション”を視覚化する。
+const RANK_EMPHASIS = [
+  { border: 3, scale: 1 }, // 1位
+  { border: 2.5, scale: 1 }, // 2位
+  { border: 2.5, scale: 1 }, // 3位
+  { border: 1.5, scale: 1 }, // 4位
+  { border: 1.5, scale: 1 }, // 5位
+  { border: 1.5, scale: 1 }, // 6位
+];
+
 function ResultCard({
   rank,
   entry,
@@ -171,92 +182,50 @@ function ResultCard({
 }) {
   const medal = MEDALS[rank];
   const empty = !entry;
+  const emph = RANK_EMPHASIS[rank] ?? RANK_EMPHASIS[5];
 
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const ratioRef = useRef<number | null>(null);
-  const [box, setBox] = useState<{ w: number; h: number } | null>(null);
-
-  const recompute = useCallback(() => {
-    const el = wrapRef.current;
-    const ratio = ratioRef.current;
-    if (!el || !ratio) return;
-    const cw = el.clientWidth;
-    const ch = el.clientHeight;
-    if (!cw || !ch) return;
-    let w = cw;
-    let h = cw / ratio;
-    if (h > ch) {
-      h = ch;
-      w = ch * ratio;
-    }
-    setBox({ w: Math.round(w), h: Math.round(h) });
-  }, []);
-
-  const onImgLoad = useCallback(
-    (e: React.SyntheticEvent<HTMLImageElement>) => {
-      const img = e.currentTarget;
-      if (img.naturalWidth && img.naturalHeight) {
-        ratioRef.current = img.naturalWidth / img.naturalHeight;
-        recompute();
-      }
-    },
-    [recompute],
-  );
-
-  useLayoutEffect(() => {
-    recompute();
-    const el = wrapRef.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(recompute);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [recompute]);
-
-  const frameSize: React.CSSProperties = box
-    ? { width: box.w, height: box.h }
-    : { width: "auto", height: "100%", aspectRatio: "4 / 3" };
+  if (empty) {
+    return (
+      <div style={{ ...styles.frame, ...styles.emptyFrame }}>
+        <div style={styles.rankRow}>
+          {medal.crown && <span style={styles.crown}>{medal.crown}</span>}
+          <span style={{ ...styles.rank, color: medal.color }}>{medal.label}</span>
+        </div>
+        <span style={styles.emptyText}>{loading ? "…" : "空いてます"}</span>
+      </div>
+    );
+  }
 
   return (
-    <div ref={wrapRef} style={styles.cardWrap}>
-      {empty ? (
-        <div style={{ ...styles.frame, ...styles.emptyFrame, width: "min(100%, 60vh)", height: "100%" }}>
-          <div style={styles.rankRow}>
-            {medal.crown && <span style={styles.crown}>{medal.crown}</span>}
-            <span style={{ ...styles.rank, color: medal.color }}>{medal.label}</span>
-          </div>
-          <span style={styles.emptyText}>{loading ? "…" : "空いてます"}</span>
-        </div>
-      ) : (
-        <div
-          style={{
-            ...styles.frame,
-            ...frameSize,
-            boxShadow: `0 0 0 2px ${medal.color}, 0 18px 60px ${medal.glow}`,
-          }}
-        >
-          <img src={entry.imageUrl} alt={entry.name ?? entry.imageId} style={styles.img} onLoad={onImgLoad} />
+    <div
+      style={{
+        ...styles.frame,
+        boxShadow: `inset 0 0 0 ${emph.border}px ${medal.color}, 0 18px 60px ${medal.glow}`,
+      }}
+    >
+      <img src={entry.imageUrl} alt={entry.name ?? entry.imageId} style={styles.img} />
+      {/* 文字の可読性スクリム（左上＝順位 / 右下＝得点を少し暗く） */}
+      <div style={styles.scrim} />
 
-          {/* 順位（左上） */}
-          <div style={styles.rankBadge}>
-            {medal.crown && <span style={styles.crown}>{medal.crown}</span>}
-            <span style={{ ...styles.rank, color: medal.color, textShadow: "0 2px 10px rgba(0,0,0,0.85)" }}>
-              {medal.label}
-            </span>
-          </div>
+      {/* 順位（左上） */}
+      <div style={styles.rankBadge}>
+        {medal.crown && <span style={styles.crown}>{medal.crown}</span>}
+        <span style={{ ...styles.rank, color: medal.color, textShadow: "0 2px 10px rgba(0,0,0,0.9)" }}>
+          {medal.label}
+        </span>
+      </div>
 
-          {/* 得点（右下） */}
-          <div style={styles.scoreBadge}>
-            <span className="tnum" style={{ ...styles.score, color: medal.color }}>
-              {entry.score}
-            </span>
-            <span style={styles.scoreUnit}>点</span>
-          </div>
+      {/* 得点（右下） */}
+      <div style={styles.scoreBadge}>
+        <span className="tnum" style={{ ...styles.score, color: medal.color }}>
+          {entry.score}
+        </span>
+        <span style={styles.scoreUnit}>点</span>
+      </div>
 
-          {entry.name && (
-            <div style={styles.caption} className="mono">
-              {entry.name}
-            </div>
-          )}
+      {entry.name && (
+        <div style={styles.caption} className="mono">
+          {entry.name}
         </div>
       )}
     </div>
@@ -359,21 +328,13 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   // --- カード本体（共通） ---
-  cardWrap: {
-    flex: 1,
-    minWidth: 0,
-    minHeight: 0,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
   frame: {
     position: "relative",
-    maxWidth: "100%",
-    maxHeight: "100%",
+    width: "100%",
+    height: "100%",
     borderRadius: 18,
     overflow: "hidden",
-    background: "#000",
+    background: "#0a0e1a",
     // 文字をカード幅基準でスケールさせるためのコンテナ。
     containerType: "inline-size",
   },
@@ -386,7 +347,16 @@ const styles: Record<string, React.CSSProperties> = {
     border: "2px dashed rgba(120,170,255,0.3)",
     background: "rgba(120,170,255,0.04)",
   },
-  img: { width: "100%", height: "100%", objectFit: "cover", display: "block" },
+  // セルいっぱいに敷き詰める（cover）。縦横どちらの写真でも余白が出ない。
+  img: { position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" },
+  // 文字可読性のためのスクリム（左上＝順位 / 右下＝得点を少し暗く）。
+  scrim: {
+    position: "absolute",
+    inset: 0,
+    pointerEvents: "none",
+    background:
+      "linear-gradient(135deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.12) 26%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.12) 74%, rgba(0,0,0,0.55) 100%)",
+  },
 
   // 端のオーバーレイ（cqw でカード幅に追従）。
   rankBadge: {
