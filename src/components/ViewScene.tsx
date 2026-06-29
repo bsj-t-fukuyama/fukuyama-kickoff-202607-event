@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion, type PanInfo } from "framer-motion";
 import type { ScoredItem } from "../lib/api";
 import { pickComment } from "../lib/comments";
 import { useScoringClock } from "../lib/useScoringClock";
@@ -99,23 +99,35 @@ export default function ViewScene({
   );
 }
 
-// 下からスライドインする内訳ボトムシート（CriteriaWidget のモバイル版）。
-const sheetVariants = {
-  hidden: { y: "110%" },
-  visible: {
-    y: 0,
-    transition: { type: "spring" as const, stiffness: 240, damping: 30, when: "beforeChildren" as const, staggerChildren: 0.07 },
-  },
-  exit: { y: "110%", transition: { duration: 0.3 } },
-};
-const rowVariants = {
-  hidden: { opacity: 0, y: 24, scale: 0.85 },
-  visible: { opacity: 1, y: 0, scale: 1, transition: { type: "spring" as const, stiffness: 280, damping: 22 } },
-};
+// 下からのボトムシート（CriteriaWidget のモバイル版）。
+// つまみ(ハンドル)を上下にスワイプ、またはタップで開閉できる。最小化すると下部に
+// バーだけ残り、上にスワイプ/タップで戻せる。最小化状態は localStorage に保存し、
+// 次の写真でも維持する（毎回せり上がって写真を隠さないように）。
+const COLLAPSE_KEY = "view.breakdown.collapsed";
 
 function MobileBreakdown({ item, revealed }: { item: ScoredItem; revealed: boolean }) {
   const { rows } = computeBreakdown(item);
   const s = item.signals;
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(COLLAPSE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem(COLLAPSE_KEY, collapsed ? "1" : "0");
+    } catch {
+      /* noop */
+    }
+  }, [collapsed]);
+
+  // スワイプ方向で開閉（上方向=開く / 下方向=閉じる）。
+  const onDragEnd = (_e: unknown, info: PanInfo) => {
+    if (info.offset.y < -28 || info.velocity.y < -250) setCollapsed(false);
+    else if (info.offset.y > 28 || info.velocity.y > 250) setCollapsed(true);
+  };
 
   return (
     <AnimatePresence>
@@ -123,46 +135,72 @@ function MobileBreakdown({ item, revealed }: { item: ScoredItem; revealed: boole
         <motion.aside
           key="sheet"
           style={sheetStyles.sheet}
-          variants={sheetVariants}
-          initial="hidden"
-          animate="visible"
-          exit="exit"
+          initial={{ y: "110%" }}
+          animate={{ y: 0 }}
+          exit={{ y: "110%" }}
+          transition={{ type: "spring", stiffness: 240, damping: 30 }}
         >
-          <div style={sheetStyles.grip} />
-          {rows.map((row) => (
-            <motion.div key={row.key} style={sheetStyles.block} variants={rowVariants}>
-              <div style={sheetStyles.axisTop}>
-                <span style={sheetStyles.axisName}>
-                  {row.label}
-                  {row.key === "people" && (
-                    <span style={sheetStyles.peopleCount}>
-                      （{typeof s?.peopleCount === "number" ? `${s.peopleCount}人` : "No entry"}）
+          {/* つまみ: タップで開閉、上下スワイプでも開閉 */}
+          <motion.div
+            style={sheetStyles.handle}
+            onClick={() => setCollapsed((c) => !c)}
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragSnapToOrigin
+            dragElastic={0.5}
+            onDragEnd={onDragEnd}
+            aria-label={collapsed ? "内訳を開く" : "内訳を隠す"}
+          >
+            <div style={sheetStyles.grip} />
+            <div style={sheetStyles.handleLabel}>
+              {collapsed ? "得点の内訳を見る ▲" : "内訳を隠す ▼"}
+            </div>
+          </motion.div>
+
+          {/* 折りたたみ領域: 最小化で高さ0へアニメーション */}
+          <motion.div
+            style={sheetStyles.collapsible}
+            initial={false}
+            animate={{ height: collapsed ? 0 : "auto", opacity: collapsed ? 0 : 1 }}
+            transition={{ type: "tween", duration: 0.32, ease: [0.4, 0, 0.2, 1] }}
+          >
+            <div style={sheetStyles.rows}>
+              {rows.map((row) => (
+                <div key={row.key} style={sheetStyles.block}>
+                  <div style={sheetStyles.axisTop}>
+                    <span style={sheetStyles.axisName}>
+                      {row.label}
+                      {row.key === "people" && (
+                        <span style={sheetStyles.peopleCount}>
+                          （{typeof s?.peopleCount === "number" ? `${s.peopleCount}人` : "No entry"}）
+                        </span>
+                      )}
                     </span>
-                  )}
-                </span>
-                <span style={sheetStyles.points}>
-                  <span className="tnum">{row.points}</span>
-                  <span style={sheetStyles.pointsMax}> / {row.max}</span>
-                </span>
-              </div>
-              <div style={sheetStyles.track}>
-                <div
-                  style={{
-                    ...sheetStyles.fill,
-                    width: `${(row.points / (row.max || 1)) * 100}%`,
-                    background: row.color,
-                    boxShadow: `0 0 10px ${row.color}aa`,
-                  }}
-                />
-              </div>
-              <div style={sheetStyles.descRow}>
-                <span style={{ ...sheetStyles.mark, color: row.color }}>
-                  {row.symbol} {row.markLabel}
-                </span>
-                <span style={sheetStyles.desc}>{row.desc}</span>
-              </div>
-            </motion.div>
-          ))}
+                    <span style={sheetStyles.points}>
+                      <span className="tnum">{row.points}</span>
+                      <span style={sheetStyles.pointsMax}> / {row.max}</span>
+                    </span>
+                  </div>
+                  <div style={sheetStyles.track}>
+                    <div
+                      style={{
+                        ...sheetStyles.fill,
+                        width: `${(row.points / (row.max || 1)) * 100}%`,
+                        background: row.color,
+                        boxShadow: `0 0 10px ${row.color}aa`,
+                      }}
+                    />
+                  </div>
+                  <div style={sheetStyles.descRow}>
+                    <span style={{ ...sheetStyles.mark, color: row.color }}>
+                      {row.symbol} {row.markLabel}
+                    </span>
+                    <span style={sheetStyles.desc}>{row.desc}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
         </motion.aside>
       )}
     </AnimatePresence>
@@ -206,25 +244,45 @@ const sheetStyles: Record<string, React.CSSProperties> = {
     right: 0,
     bottom: 0,
     zIndex: 10001,
-    maxHeight: "70vh",
-    overflowY: "auto",
     display: "flex",
     flexDirection: "column",
-    gap: "clamp(0.6rem, 1.6vh, 1rem)",
-    padding: "0.7rem clamp(0.9rem, 4vw, 1.4rem) clamp(1rem, 3vh, 1.6rem)",
     borderTopLeftRadius: 22,
     borderTopRightRadius: 22,
     background: "linear-gradient(180deg, rgba(8,14,32,0.98), rgba(6,10,24,0.99))",
     borderTop: "1px solid rgba(120,170,255,0.28)",
     boxShadow: "0 -24px 60px rgba(0,0,0,0.6)",
   },
+  // つまみ（常に見える）。ドラッグで開閉するので縦スクロールを奪わないよう touchAction:none。
+  handle: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 5,
+    padding: "10px 0 8px",
+    cursor: "grab",
+    touchAction: "none",
+    userSelect: "none",
+  },
   grip: {
     width: 44,
     height: 5,
     borderRadius: 99,
-    background: "rgba(160,195,255,0.35)",
-    alignSelf: "center",
-    marginBottom: "0.2rem",
+    background: "rgba(160,195,255,0.45)",
+  },
+  handleLabel: {
+    fontSize: "0.72rem",
+    fontWeight: 700,
+    letterSpacing: "0.06em",
+    color: "var(--blue-glow)",
+  },
+  collapsible: { overflow: "hidden" },
+  rows: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "clamp(0.6rem, 1.6vh, 1rem)",
+    maxHeight: "62vh",
+    overflowY: "auto",
+    padding: "0.2rem clamp(0.9rem, 4vw, 1.4rem) calc(env(safe-area-inset-bottom) + 1rem)",
   },
   block: { display: "grid", gap: "0.3rem" },
   axisTop: { display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "0.6rem" },
