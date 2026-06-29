@@ -75,6 +75,8 @@ export default function App() {
             ) : (
               <IdleScreen stats={follower.stats} hideStats />
             )}
+            {/* 観覧画面からも結果発表（暫定）へ遷移できるよう右上にボタンを置く。 */}
+            <ResultsButton onOpen={() => navigate(RESULT_PATH)} />
             {/* 参加者は右下のボタンからスマホの写真を投稿できる。 */}
             <PostUpload />
           </motion.div>
