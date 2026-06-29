@@ -83,12 +83,31 @@ app.post("/api/reset", async (_req, res) => {
   try {
     await resetSheet(); // 1) シートのデータ行を消去
     queue.reset(); // 2) サーバーの seen / items をクリア
+    presentation = null; // 上演状態もクリア（/view を待機に戻す）
     queue.poll().catch((err) => console.error("[reset] re-scan poll failed:", err.message)); // 3) 再スキャン開始
     res.json({ ok: true });
   } catch (err) {
     console.error("[reset]", err.message);
     res.status(502).json({ ok: false, error: err.message });
   }
+});
+
+// --- リアルタイム同期: /main が主導、/view(参加者) が追従する -----------------
+// /main は写真を切り替えるたびに「いまこの index を表示開始した」と報告し、サーバーが
+// 開始時刻を刻む。/view はこの状態をポーリングし、サーバー時刻基準の経過ぶんだけ
+// アニメを進めた状態で同じ写真を再生する（端末間の時計ズレに依存しない）。
+let presentation = null; // { index, startedAt(ms, server time) }
+
+app.post("/api/presentation", (req, res) => {
+  const index = Number(req.body?.index);
+  if (!Number.isFinite(index)) return res.status(400).json({ ok: false, error: "bad index" });
+  presentation = { index, startedAt: Date.now() };
+  res.json({ ok: true });
+});
+
+app.get("/api/presentation", (_req, res) => {
+  if (!presentation) return res.json({ index: null, now: Date.now() });
+  res.json({ index: presentation.index, startedAt: presentation.startedAt, now: Date.now() });
 });
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));

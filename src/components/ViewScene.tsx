@@ -28,16 +28,20 @@ export default function ViewScene({
   stats,
   durationMs,
   onComplete,
+  offsetMs = 0,
 }: {
   item: ScoredItem;
   stats: QueueStats | null;
   durationMs: number;
   onComplete: () => void;
+  // /main の表示開始からの経過(ms)。これだけ進めた状態で再生し、リアルタイム同期する。
+  offsetMs?: number;
 }) {
   const { display, fraction, scanning, revealed } = useScoringClock(
     item.score,
     durationMs,
     onComplete,
+    offsetMs,
   );
 
   const comment = useMemo(

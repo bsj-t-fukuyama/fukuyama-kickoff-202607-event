@@ -21,10 +21,13 @@ export type ScoringClock = {
 };
 
 // `score` の写真を `durationMs` かけて採点演出し、終わったら onComplete()。
+// offsetMs > 0 のときは、その経過時間ぶん進んだ状態から再生する（/view が /main に
+// リアルタイム追従するため、表示開始からの経過ぶんだけ先に進めて同期する用途）。
 export function useScoringClock(
   score: number,
   durationMs: number,
   onComplete: () => void,
+  offsetMs = 0,
 ): ScoringClock {
   const [display, setDisplay] = useState(0);
   const [p, setP] = useState(0);
@@ -37,7 +40,7 @@ export function useScoringClock(
 
     const tick = (now: number) => {
       if (!start) start = now;
-      const elapsed = now - start;
+      const elapsed = now - start + offsetMs;
       const prog = Math.min(1, elapsed / durationMs);
       setP(prog);
 
