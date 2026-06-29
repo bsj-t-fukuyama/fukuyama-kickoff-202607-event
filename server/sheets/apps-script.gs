@@ -40,21 +40,21 @@ function doPost(e) {
     // が拾える）に共有設定する。※この機能を使うには Apps Script に Drive 権限が必要なので、
     // 貼り替え後の初回実行/再デプロイ時に表示される認可を許可すること。
     if (body.action === "upload") {
-      var folderId = String(body.folderId || "");
-      if (!folderId) return json_({ ok: false, error: "missing folderId" });
-      var data = String(body.data || "");
-      if (!data) return json_({ ok: false, error: "missing data" });
-      var mimeType = String(body.mimeType || "image/jpeg");
-      var name = String(body.name || "upload_" + new Date().getTime() + ".jpg");
-      var bytes = Utilities.base64Decode(data);
-      var blob = Utilities.newBlob(bytes, mimeType, name);
-      var file = DriveApp.getFolderById(folderId).createFile(blob);
+      // 変数名は doPost 内の他の宣言(name 等)と衝突しないよう up* で揃える。
+      var upFolderId = String(body.folderId || "");
+      if (!upFolderId) return json_({ ok: false, error: "missing folderId" });
+      var upData = String(body.data || "");
+      if (!upData) return json_({ ok: false, error: "missing data" });
+      var upMime = String(body.mimeType || "image/jpeg");
+      var upName = String(body.name || "upload_" + new Date().getTime() + ".jpg");
+      var upBlob = Utilities.newBlob(Utilities.base64Decode(upData), upMime, upName);
+      var upFile = DriveApp.getFolderById(upFolderId).createFile(upBlob);
       try {
-        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        upFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
       } catch (shErr) {
         // 共有設定に失敗しても作成自体は成功扱い（フォルダ側の公開設定で見える場合あり）。
       }
-      return json_({ ok: true, action: "upload", id: file.getId(), name: file.getName() });
+      return json_({ ok: true, action: "upload", id: upFile.getId(), name: upFile.getName() });
     }
 
     // リセット: ヘッダ(1行目)以外のデータ行をすべて消去して元の状態に戻す。
