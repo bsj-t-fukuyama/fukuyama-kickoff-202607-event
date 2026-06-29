@@ -27,6 +27,12 @@ const screenVariants = {
   exit: { opacity: 0, transition: { duration: 0.25 } },
 };
 
+// カードの高さ（順位が高いほど大きい）。構図は共通で、px値だけ PC/スマホで変える。
+function cardHeight(rank: number, mobile: boolean): string {
+  if (mobile) return rank === 0 ? "58dvh" : rank <= 2 ? "46dvh" : "40dvh";
+  return rank === 0 ? "82dvh" : rank <= 2 ? "66dvh" : "56dvh";
+}
+
 // 横幅でPC/スマホを判定（リサイズ追従）。
 function useIsMobile(breakpoint = 820) {
   const [mobile, setMobile] = useState(
@@ -86,49 +92,15 @@ export default function ResultScreen({ onBack }: { onBack: () => void }) {
         <span style={styles.topBarSpacer} />
       </div>
 
-      {mobile ? (
-        // --- スマホ: 1位→6位 を縦に積み上げる ---
-        <div style={styles.mobileStack}>
-          {slots.map((entry, i) => (
-            <Cell
-              key={i}
-              rank={i}
-              delay={i * 0.05}
-              style={{ height: i === 0 ? "58dvh" : i <= 2 ? "46dvh" : "40dvh" }}
-            >
-              <ResultCard rank={i} entry={entry} loading={loading} />
-            </Cell>
-          ))}
-        </div>
-      ) : (
-        // --- PC: 1位(左) + 2/3位(右) を1画面、スクロールで 4〜6位 ---
-        <>
-          <div style={styles.podium}>
-            <Cell rank={0} delay={0} style={styles.leftCol}>
-              <ResultCard rank={0} entry={slots[0]} loading={loading} />
-            </Cell>
-            <div style={styles.rightCol}>
-              <Cell rank={1} delay={0.06}>
-                <ResultCard rank={1} entry={slots[1]} loading={loading} />
-              </Cell>
-              <Cell rank={2} delay={0.12}>
-                <ResultCard rank={2} entry={slots[2]} loading={loading} />
-              </Cell>
-            </div>
-          </div>
-
-          <div style={styles.lowerSection}>
-            <div style={styles.lowerTitle}>4〜6位</div>
-            <div style={styles.lowerGrid}>
-              {[3, 4, 5].map((r, k) => (
-                <Cell key={r} rank={r} delay={0.05 * k}>
-                  <ResultCard rank={r} entry={slots[r]} loading={loading} />
-                </Cell>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
+      {/* PC・スマホ共通: 1位→6位 を縦に積み上げる（同じ構図・cover埋め）。
+          違いは縦横の px 値だけ（PCは中央寄せの幅広カラム＋背の高いカード）。 */}
+      <div style={{ ...styles.stack, ...(mobile ? styles.stackMobile : styles.stackPc) }}>
+        {slots.map((entry, i) => (
+          <Cell key={i} rank={i} delay={i * 0.05} style={{ height: cardHeight(i, mobile) }}>
+            <ResultCard rank={i} entry={entry} loading={loading} />
+          </Cell>
+        ))}
+      </div>
     </motion.div>
   );
 }
@@ -270,53 +242,16 @@ const styles: Record<string, React.CSSProperties> = {
   },
   topBarSpacer: { width: 96 },
 
-  // --- PC: 1画面ぶんの表彰台（1位+2/3位） ---
-  podium: {
-    flexShrink: 0,
-    height: "calc(100dvh - 5.5rem)",
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: "clamp(0.5rem, 1.2vw, 1.2rem)",
-    alignItems: "stretch",
-  },
-  leftCol: { minWidth: 0, minHeight: 0 },
-  rightCol: {
-    minWidth: 0,
-    minHeight: 0,
-    display: "grid",
-    gridTemplateRows: "1fr 1fr",
-    gap: "clamp(0.4rem, 1vh, 0.8rem)",
-  },
-
-  // --- PC: スクロールで現れる 4〜6位（コンパクトに3つ横並び） ---
-  lowerSection: {
-    flexShrink: 0,
-    paddingTop: "clamp(0.6rem, 1.4vh, 1.2rem)",
+  // --- PC・スマホ共通の縦積み（違いは幅などの px 値のみ） ---
+  stack: {
     display: "flex",
     flexDirection: "column",
-    gap: "clamp(0.4rem, 1vh, 0.8rem)",
-  },
-  lowerTitle: {
-    textAlign: "center",
-    fontSize: "clamp(0.95rem, 1.6vw, 1.4rem)",
-    fontWeight: 800,
-    letterSpacing: "0.06em",
-    color: "var(--blue-glow)",
-  },
-  lowerGrid: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr 1fr",
-    gap: "clamp(0.5rem, 1.2vw, 1.2rem)",
-    height: "min(46dvh, 420px)",
-  },
-
-  // --- スマホ: 縦積み ---
-  mobileStack: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "clamp(0.7rem, 2vh, 1.2rem)",
+    gap: "clamp(0.7rem, 2vh, 1.4rem)",
     paddingBottom: "calc(env(safe-area-inset-bottom) + 1rem)",
   },
+  stackMobile: { width: "100%" },
+  // PC は中央寄せの幅広カラム。カードは背が高い（cardHeight 参照）。
+  stackPc: { width: "min(920px, 66vw)", alignSelf: "center" },
 
   // 各セル（カードの置き場）。ResultCard がこの領域に写真をフィットさせる。
   cell: {
