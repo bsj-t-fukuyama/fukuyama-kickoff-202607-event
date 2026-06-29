@@ -184,26 +184,30 @@ export default function SettingsScreen({ onBack }: { onBack: () => void }) {
               exit={{ opacity: 0, scale: 0.95 }}
               onClick={(e) => e.stopPropagation()}
             >
-              <p style={styles.modalText}>本当にリセットしますか？</p>
-              <p style={styles.modalSub}>スキャン結果のシートが空になり、元には戻せません。</p>
-              <div style={styles.modalActions}>
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  disabled={resetting}
-                  style={{ ...styles.resetBtn, opacity: resetting ? 0.6 : 1 }}
-                >
-                  {resetting ? "リセット中…" : "OK"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setConfirming(false)}
-                  disabled={resetting}
-                  style={styles.cancelBtn}
-                >
-                  いいえ
-                </button>
-              </div>
+              {resetting ? (
+                <div style={styles.loadingWrap}>
+                  <motion.div
+                    style={styles.spinner}
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 0.9, repeat: Infinity, ease: "linear" }}
+                  />
+                  <p style={styles.modalText}>リセット中…</p>
+                  <p style={styles.modalSub}>シートを初期化して再スキャンを準備しています</p>
+                </div>
+              ) : (
+                <>
+                  <p style={styles.modalText}>本当にリセットしますか？</p>
+                  <p style={styles.modalSub}>スキャン結果のシートが空になり、元には戻せません。</p>
+                  <div style={styles.modalActions}>
+                    <button type="button" onClick={handleReset} style={styles.resetBtn}>
+                      OK
+                    </button>
+                    <button type="button" onClick={() => setConfirming(false)} style={styles.cancelBtn}>
+                      いいえ
+                    </button>
+                  </div>
+                </>
+              )}
             </motion.div>
           </motion.div>
         )}
@@ -341,4 +345,20 @@ const styles: Record<string, React.CSSProperties> = {
   modalText: { fontSize: "clamp(1.2rem, 2.2vw, 1.6rem)", fontWeight: 800, color: "var(--text)" },
   modalSub: { fontSize: "0.9rem", color: "var(--text-dim)", lineHeight: 1.5 },
   modalActions: { display: "flex", justifyContent: "center", gap: "1rem", marginTop: "0.8rem" },
+  // リセット処理中のローディング表示。
+  loadingWrap: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "0.8rem",
+    padding: "0.6rem 0",
+  },
+  spinner: {
+    width: 48,
+    height: 48,
+    borderRadius: "50%",
+    border: "4px solid rgba(120,170,255,0.2)",
+    borderTopColor: "var(--blue-glow)",
+    boxShadow: "0 0 18px rgba(56,182,255,0.4)",
+  },
 };
