@@ -68,7 +68,6 @@ export default function App() {
               <ViewScene
                 key={follower.item.id}
                 item={follower.item}
-                stats={follower.stats}
                 durationMs={SCORING_MS}
                 offsetMs={follower.offsetMs}
                 onComplete={noop}

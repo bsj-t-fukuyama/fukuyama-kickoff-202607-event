@@ -18,7 +18,7 @@ export default function IdleScreen({
         transition={{ duration: 0.8 }}
         style={styles.theme}
       >
-        <div style={styles.themeText}>{stats?.theme ?? "—"}</div>
+        <div style={styles.themeText}>BRAVE THROUGH</div>
       </motion.div>
 
       <div style={styles.loaderWrap}>

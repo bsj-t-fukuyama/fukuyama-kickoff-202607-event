@@ -42,8 +42,7 @@ export default function ScoringScene({
   return (
     <div style={styles.root}>
       <div style={styles.header}>
-        <div className="eyebrow">PICTURE SCORES · お題</div>
-        <div style={styles.theme}>{stats?.theme ?? "—"}</div>
+        <div style={styles.theme}>BRAVE THROUGH</div>
       </div>
 
       <div style={styles.stage}>

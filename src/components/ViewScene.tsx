@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import type { QueueStats, ScoredItem } from "../lib/api";
+import type { ScoredItem } from "../lib/api";
 import { pickComment } from "../lib/comments";
 import { useScoringClock } from "../lib/useScoringClock";
 import { computeBreakdown } from "../lib/breakdown";
@@ -25,13 +25,11 @@ const REVEAL_LABEL: Record<string, string> = {
 
 export default function ViewScene({
   item,
-  stats,
   durationMs,
   onComplete,
   offsetMs = 0,
 }: {
   item: ScoredItem;
-  stats: QueueStats | null;
   durationMs: number;
   onComplete: () => void;
   // /main の表示開始からの経過(ms)。これだけ進めた状態で再生し、リアルタイム同期する。
@@ -52,8 +50,7 @@ export default function ViewScene({
   return (
     <div style={styles.root}>
       <div style={styles.header}>
-        <div className="eyebrow">PICTURE SCORES · お題</div>
-        <div style={styles.theme}>{stats?.theme ?? "—"}</div>
+        <div style={styles.theme}>BRAVE THROUGH</div>
       </div>
 
       <div style={styles.photoArea}>
