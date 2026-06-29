@@ -1,3 +1,5 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import express from "express";
 import cors from "cors";
 import { config } from "./config.js";
@@ -90,6 +92,16 @@ app.post("/api/reset", async (_req, res) => {
 });
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
+
+// --- 本番: ビルド済みフロント(dist)を同一オリジンで配信 -------------------------
+// /api と画像プロキシ以外のパスは SPA として index.html を返す。
+// 開発時(vite)はブラウザが 5173 を見るのでこの分岐は使われない。
+const distDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../dist");
+app.use(express.static(distDir));
+app.get("*", (req, res, next) => {
+  if (req.path.startsWith("/api/")) return next();
+  res.sendFile(path.join(distDir, "index.html"));
+});
 
 queue.start();
 
