@@ -20,6 +20,38 @@ export type ScoringClock = {
   revealed: boolean;
 };
 
+// バックグラウンドタブでも止まらない定期ティッカー。
+// ブラウザは非表示タブの setTimeout/setInterval/requestAnimationFrame を強く
+// スロットル（rAF は完全停止、タイマーは最終的に 1分に1回まで）するため、
+// スロットルされない Web Worker のタイマーをフォールバックに使う。これで PC の
+// /main が裏ウィンドウ・最小化・別タブにあっても採点が回り続ける。
+function makeTicker(ms: number, onTick: () => void): () => void {
+  if (typeof Worker !== "undefined") {
+    try {
+      const src =
+        "let id=setInterval(function(){postMessage(0)}," +
+        ms +
+        ");onmessage=function(e){if(e.data==='stop'){clearInterval(id)}}";
+      const url = URL.createObjectURL(new Blob([src], { type: "application/javascript" }));
+      const w = new Worker(url);
+      w.onmessage = () => onTick();
+      return () => {
+        try {
+          w.postMessage("stop");
+        } catch {
+          /* noop */
+        }
+        w.terminate();
+        URL.revokeObjectURL(url);
+      };
+    } catch {
+      /* Worker が使えない環境は下の setInterval にフォールバック */
+    }
+  }
+  const id = window.setInterval(onTick, ms);
+  return () => window.clearInterval(id);
+}
+
 // `score` の写真を `durationMs` かけて採点演出し、終わったら onComplete()。
 // offsetMs > 0 のときは、その経過時間ぶん進んだ状態から再生する（/view が /main に
 // リアルタイム追従するため、表示開始からの経過ぶんだけ先に進めて同期する用途）。
@@ -35,12 +67,14 @@ export function useScoringClock(
   const doneRef = useRef(false);
 
   useEffect(() => {
-    let raf = 0;
-    let start = 0;
+    let alive = true;
+    let rafId = 0;
+    // 経過は実時刻基準。タブが裏→表に戻っても正しい位置に追いつく（freeze しない）。
+    const start = Date.now() - offsetMs;
 
-    const tick = (now: number) => {
-      if (!start) start = now;
-      const elapsed = now - start + offsetMs;
+    const compute = () => {
+      if (!alive || doneRef.current) return;
+      const elapsed = Date.now() - start;
       const prog = Math.min(1, elapsed / durationMs);
       setP(prog);
 
@@ -60,18 +94,46 @@ export function useScoringClock(
       }
       setDisplay(value);
 
-      if (prog >= 1) {
-        if (!doneRef.current) {
-          doneRef.current = true;
-          onComplete();
-        }
-        return;
+      if (prog >= 1 && !doneRef.current) {
+        doneRef.current = true;
+        onComplete();
       }
-      raf = requestAnimationFrame(tick);
     };
 
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    // 可視時: requestAnimationFrame で滑らかに更新。
+    const rafLoop = () => {
+      if (!alive || doneRef.current) return;
+      compute();
+      if (!doneRef.current) rafId = requestAnimationFrame(rafLoop);
+    };
+
+    // 非表示時のフォールバック（Worker タイマー）。可視時は rAF に任せて二重更新を避ける。
+    const stopTicker = makeTicker(200, () => {
+      if (typeof document !== "undefined" && !document.hidden) return;
+      compute();
+    });
+
+    const hidden = typeof document !== "undefined" && document.hidden;
+    if (!hidden) rafLoop();
+
+    // タブの表示/非表示が切り替わったら駆動方法を切り替える。
+    const onVis = () => {
+      if (doneRef.current) return;
+      cancelAnimationFrame(rafId);
+      if (!document.hidden) rafLoop(); // 表に戻ったら rAF を再開
+    };
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", onVis);
+    }
+
+    return () => {
+      alive = false;
+      cancelAnimationFrame(rafId);
+      stopTicker();
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", onVis);
+      }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
