@@ -162,7 +162,7 @@ scoreImage(item, { theme, weights }) -> {
 `.env`（[.env.example](.env.example)）の推奨設定：
 
 ```dotenv
-THEME=最高の乾杯
+THEME=BRAVE THROUGH
 # にぎやかさ(人数)主役の配分: 他3軸=各20点 / にぎやかさ=40点
 W_MOOD=0.2
 W_PEOPLE=0.4

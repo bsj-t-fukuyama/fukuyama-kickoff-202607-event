@@ -18,7 +18,6 @@ export default function IdleScreen({
         transition={{ duration: 0.8 }}
         style={styles.theme}
       >
-        <div className="eyebrow">今回のお題</div>
         <div style={styles.themeText}>{stats?.theme ?? "—"}</div>
       </motion.div>
 
