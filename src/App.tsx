@@ -10,9 +10,11 @@ import SkipButton from "./components/SkipButton";
 import PrevButton from "./components/PrevButton";
 import SettingsScreen from "./components/SettingsScreen";
 import SettingsButton from "./components/SettingsButton";
+import NotFound from "./components/NotFound";
 
 const SCORING_MS = 10_000; // one judging animation
 const IDLE_RETRY_MS = 4_000; // how often to look for new photos while idle
+const MAIN_PATH = "/main"; // 採点メイン画面の階層（これ以外の未定義パスは404）
 const RESULT_PATH = "/result"; // 結果発表（暫定）画面の階層
 const SETTINGS_PATH = "/settings"; // 設定画面の階層
 
@@ -81,6 +83,7 @@ export default function App() {
     advance();
   }, [item, advance]);
 
+  const onMain = path === MAIN_PATH;
   const onResult = path === RESULT_PATH;
   const onSettings = path === SETTINGS_PATH;
 
@@ -88,10 +91,10 @@ export default function App() {
     <Background>
       <AnimatePresence mode="wait">
         {onResult ? (
-          <ResultScreen key="result" onBack={() => navigate("/")} />
+          <ResultScreen key="result" onBack={() => navigate(MAIN_PATH)} />
         ) : onSettings ? (
-          <SettingsScreen key="settings" onBack={() => navigate("/")} />
-        ) : (
+          <SettingsScreen key="settings" onBack={() => navigate(MAIN_PATH)} />
+        ) : onMain ? (
           <motion.div
             key="main"
             style={{ height: "100%" }}
@@ -115,6 +118,8 @@ export default function App() {
             {item && item.index > 0 && <PrevButton onPrev={handlePrev} />}
             {item && <SkipButton onSkip={handleSkip} />}
           </motion.div>
+        ) : (
+          <NotFound key="404" onHome={() => navigate(MAIN_PATH)} />
         )}
       </AnimatePresence>
     </Background>
