@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { fetchResults, PODIUM_SIZE, type ResultEntry } from "../lib/results";
 
@@ -96,9 +96,12 @@ export default function ResultScreen({ onBack }: { onBack: () => void }) {
           違いは縦横の px 値だけ（PCは中央寄せの幅広カラム＋背の高いカード）。 */}
       <div style={{ ...styles.stack, ...(mobile ? styles.stackMobile : styles.stackPc) }}>
         {slots.map((entry, i) => (
-          <Cell key={i} rank={i} delay={i * 0.05} style={{ height: cardHeight(i, mobile) }}>
-            <ResultCard rank={i} entry={entry} loading={loading} />
-          </Cell>
+          <Fragment key={i}>
+            {i === 3 && <div style={styles.groupLabel}>4〜6位</div>}
+            <Cell rank={i} delay={i * 0.05} style={{ height: cardHeight(i, mobile) }}>
+              <ResultCard rank={i} entry={entry} loading={loading} />
+            </Cell>
+          </Fragment>
         ))}
       </div>
     </motion.div>
@@ -134,13 +137,14 @@ function Cell({
 // 増えず、順位＝カードの大きさで自然に序列が伝わる。順位・得点・名前は端にオーバーレイし、
 // 文字サイズはコンテナクエリ(cqw)でカード幅に追従するので、大小どのカードも同じ構図。
 // 上位ほど枠を太く・強く光らせて“順位のグラデーション”を視覚化する。
+// 枠線は細め。上位ほどほんの少しだけ太く。
 const RANK_EMPHASIS = [
-  { border: 3, scale: 1 }, // 1位
-  { border: 2.5, scale: 1 }, // 2位
-  { border: 2.5, scale: 1 }, // 3位
-  { border: 1.5, scale: 1 }, // 4位
-  { border: 1.5, scale: 1 }, // 5位
-  { border: 1.5, scale: 1 }, // 6位
+  { border: 2 }, // 1位
+  { border: 1.5 }, // 2位
+  { border: 1.5 }, // 3位
+  { border: 1 }, // 4位
+  { border: 1 }, // 5位
+  { border: 1 }, // 6位
 ];
 
 function ResultCard({
@@ -172,7 +176,8 @@ function ResultCard({
     <div
       style={{
         ...styles.frame,
-        boxShadow: `inset 0 0 0 ${emph.border}px ${medal.color}, 0 18px 60px ${medal.glow}`,
+        border: `${emph.border}px solid ${medal.color}`,
+        boxShadow: `0 16px 50px ${medal.glow}`,
       }}
     >
       <img src={entry.imageUrl} alt={entry.name ?? entry.imageId} style={styles.img} />
@@ -232,7 +237,7 @@ const styles: Record<string, React.CSSProperties> = {
     whiteSpace: "nowrap",
   },
   title: {
-    fontSize: "clamp(1.1rem, 2vw, 1.8rem)",
+    fontSize: "clamp(1.5rem, 3.4vw, 3rem)",
     fontWeight: 800,
     letterSpacing: "-0.02em",
     textAlign: "center",
@@ -241,6 +246,15 @@ const styles: Record<string, React.CSSProperties> = {
     WebkitTextFillColor: "transparent",
   },
   topBarSpacer: { width: 96 },
+  // 「4〜6位」のセクション見出し（縦積みの 3位 と 4位 の間）。
+  groupLabel: {
+    textAlign: "center",
+    fontSize: "clamp(1.3rem, 2.8vw, 2.2rem)",
+    fontWeight: 800,
+    letterSpacing: "0.08em",
+    color: "var(--blue-glow)",
+    marginTop: "clamp(0.4rem, 1.2vh, 1rem)",
+  },
 
   // --- PC・スマホ共通の縦積み（違いは幅などの px 値のみ） ---
   stack: {

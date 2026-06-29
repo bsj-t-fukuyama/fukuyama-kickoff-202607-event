@@ -26,6 +26,8 @@ const noop = () => {};
 export default function App() {
   // ルーティング: ルータ未使用なので pathname を state で持ち、pushState で遷移する。
   const [path, setPath] = useState<string>(() => window.location.pathname);
+  // 結果/設定画面から「戻る」で帰る先（開いた元の画面）。/view から開いたら /view へ。
+  const [returnPath, setReturnPath] = useState<string>(MAIN_PATH);
 
   const onMain = path === MAIN_PATH;
   const onView = path === VIEW_PATH;
@@ -52,9 +54,9 @@ export default function App() {
     <Background>
       <AnimatePresence mode="wait">
         {onResult ? (
-          <ResultScreen key="result" onBack={() => navigate(MAIN_PATH)} />
+          <ResultScreen key="result" onBack={() => navigate(returnPath)} />
         ) : onSettings ? (
-          <SettingsScreen key="settings" onBack={() => navigate(MAIN_PATH)} />
+          <SettingsScreen key="settings" onBack={() => navigate(returnPath)} />
         ) : onView ? (
           <motion.div
             key="view"
@@ -75,8 +77,13 @@ export default function App() {
             ) : (
               <IdleScreen stats={follower.stats} hideStats />
             )}
-            {/* 観覧画面からも結果発表（暫定）へ遷移できるよう右上にボタンを置く。 */}
-            <ResultsButton onOpen={() => navigate(RESULT_PATH)} />
+            {/* 観覧画面からも結果発表へ遷移できるよう右上にボタンを置く（戻ると /view へ）。 */}
+            <ResultsButton
+              onOpen={() => {
+                setReturnPath(VIEW_PATH);
+                navigate(RESULT_PATH);
+              }}
+            />
             {/* 参加者は右下のボタンからスマホの写真を投稿できる。 */}
             <PostUpload />
           </motion.div>
@@ -99,8 +106,18 @@ export default function App() {
             ) : (
               <IdleScreen stats={leader.stats} />
             )}
-            <SettingsButton onOpen={() => navigate(SETTINGS_PATH)} />
-            <ResultsButton onOpen={() => navigate(RESULT_PATH)} />
+            <SettingsButton
+              onOpen={() => {
+                setReturnPath(MAIN_PATH);
+                navigate(SETTINGS_PATH);
+              }}
+            />
+            <ResultsButton
+              onOpen={() => {
+                setReturnPath(MAIN_PATH);
+                navigate(RESULT_PATH);
+              }}
+            />
             {leader.item && leader.item.index > 0 && <PrevButton onPrev={leader.handlePrev} />}
             {leader.item && <SkipButton onSkip={leader.handleSkip} />}
           </motion.div>
