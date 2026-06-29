@@ -1,47 +1,12 @@
 import { AnimatePresence, motion } from "framer-motion";
 import type { ScoredItem } from "../lib/api";
+import { computeBreakdown } from "../lib/breakdown";
 
 // Score-detail panel for the venue screen.
 //
 // No button — the moment the score is revealed, a full-height panel sweeps in
 // from the right edge and its rows grow into place, so the whole room can read
 // the four-axis breakdown at a glance. Slides back out when the photo changes.
-
-type Mark = "good" | "normal" | "hmm";
-
-const MARKS: Record<Mark, { symbol: string; label: string; color: string }> = {
-  good: { symbol: "◎", label: "good", color: "#ffd24d" },
-  normal: { symbol: "○", label: "normal", color: "#38b6ff" },
-  hmm: { symbol: "△", label: "hmm…", color: "#7d93b8" },
-};
-
-// Per-axis, per-bucket descriptor. All phrasing stays positive (傷つかない).
-const AXIS_DESC: Record<string, Record<Mark, string>> = {
-  mood: { good: "はじける笑顔！", normal: "いい表情", hmm: "クールに決め顔" },
-  people: { good: "大人数で迫力", normal: "みんなで写ってる", hmm: "少人数でしっとり" },
-  composition: { good: "奥行きが見事", normal: "バランス良好", hmm: "味のある構図" },
-  clarity: { good: "くっきり鮮明", normal: "しっかり見える", hmm: "やわらかい写り" },
-};
-
-// Score buckets (axis values live in 10..100 thanks to the FLOOR).
-function bucketFor(value: number): Mark {
-  if (value >= 80) return "good";
-  if (value >= 60) return "normal";
-  return "hmm";
-}
-
-// Split `total` into integers proportional to `raw`, guaranteeing the parts sum
-// to exactly `total` (largest-remainder / Hamilton apportionment).
-function apportion(raw: number[], total: number): number[] {
-  const floors = raw.map(Math.floor);
-  const remainder = total - floors.reduce((a, b) => a + b, 0);
-  const order = raw
-    .map((v, i) => ({ i, frac: v - Math.floor(v) }))
-    .sort((a, b) => b.frac - a.frac);
-  const out = [...floors];
-  for (let k = 0; k < remainder && k < order.length; k++) out[order[k].i] += 1;
-  return out;
-}
 
 // Each row grows in from the right edge — the panel sweeps in, rows follow.
 const panelVariants = {
@@ -70,15 +35,7 @@ export default function CriteriaWidget({
   item: ScoredItem;
   revealed: boolean;
 }) {
-  // Each axis's max share follows its weight (normally an even 25 each; the
-  // にぎやかさ axis grows for 大人数 photos because the server boosts its weight).
-  // Points are value×share and apportioned to sum to exactly item.score.
-  const totalWeight = item.breakdown.reduce((s, a) => s + (a.weight ?? 0), 0) || 1;
-  const shares = item.breakdown.map((a) => ((a.weight ?? 0) / totalWeight) * 100);
-  const maxShares = shares.map((sh) => Math.round(sh));
-  const rawPoints = item.breakdown.map((a, i) => (a.value / 100) * shares[i]);
-  const points = apportion(rawPoints, item.score);
-
+  const { rows, points } = computeBreakdown(item);
   const s = item.signals;
 
   return (
@@ -102,45 +59,40 @@ export default function CriteriaWidget({
             </span>
           </motion.div>
 
-          {item.breakdown.map((axis, i) => {
-            const mark = bucketFor(axis.value);
-            const m = MARKS[mark];
-            const desc = AXIS_DESC[axis.key]?.[mark] ?? "";
-            return (
-              <motion.div key={axis.key} style={styles.block} variants={rowVariants}>
-                <div style={styles.axisTop}>
-                  <span style={styles.axisName}>
-                    {axis.label}
-                    {axis.key === "people" && (
-                      <span style={styles.peopleCount}>
-                        （{typeof s?.peopleCount === "number" ? `${s.peopleCount}人` : "No entry"}）
-                      </span>
-                    )}
-                  </span>
-                  <span style={styles.points}>
-                    <span className="tnum">{points[i]}</span>
-                    <span style={styles.pointsMax}> / {maxShares[i]}</span>
-                  </span>
-                </div>
-                <div style={styles.track}>
-                  <div
-                    style={{
-                      ...styles.fill,
-                      width: `${(points[i] / (maxShares[i] || 1)) * 100}%`,
-                      background: m.color,
-                      boxShadow: `0 0 14px ${m.color}aa`,
-                    }}
-                  />
-                </div>
-                <div style={styles.descRow}>
-                  <span style={{ ...styles.mark, color: m.color }}>
-                    {m.symbol} {m.label}
-                  </span>
-                  <span style={styles.desc}>{desc}</span>
-                </div>
-              </motion.div>
-            );
-          })}
+          {rows.map((row) => (
+            <motion.div key={row.key} style={styles.block} variants={rowVariants}>
+              <div style={styles.axisTop}>
+                <span style={styles.axisName}>
+                  {row.label}
+                  {row.key === "people" && (
+                    <span style={styles.peopleCount}>
+                      （{typeof s?.peopleCount === "number" ? `${s.peopleCount}人` : "No entry"}）
+                    </span>
+                  )}
+                </span>
+                <span style={styles.points}>
+                  <span className="tnum">{row.points}</span>
+                  <span style={styles.pointsMax}> / {row.max}</span>
+                </span>
+              </div>
+              <div style={styles.track}>
+                <div
+                  style={{
+                    ...styles.fill,
+                    width: `${(row.points / (row.max || 1)) * 100}%`,
+                    background: row.color,
+                    boxShadow: `0 0 14px ${row.color}aa`,
+                  }}
+                />
+              </div>
+              <div style={styles.descRow}>
+                <span style={{ ...styles.mark, color: row.color }}>
+                  {row.symbol} {row.markLabel}
+                </span>
+                <span style={styles.desc}>{row.desc}</span>
+              </div>
+            </motion.div>
+          ))}
 
           <motion.div style={styles.sumRow} variants={rowVariants}>
             <span style={styles.sumLabel}>4軸の合計</span>

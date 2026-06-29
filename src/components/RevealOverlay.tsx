@@ -7,18 +7,22 @@ export default function RevealOverlay({
   score,
   badge,
   line,
+  compact = false,
 }: {
   show: boolean;
   score: number;
   badge: string;
   line: string;
+  // compact: モバイル(/view)向け。右パネル用の余白を空けず、下方向に内訳シート用の
+  // 余白を空けて中央に出す。
+  compact?: boolean;
 }) {
   return (
     <AnimatePresence>
       {show && (
         <motion.div
           key="reveal"
-          style={styles.backdrop}
+          style={compact ? { ...styles.backdrop, ...styles.backdropCompact } : styles.backdrop}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -79,6 +83,13 @@ const styles: Record<string, React.CSSProperties> = {
     pointerEvents: "none",
     perspective: "1200px",
     textAlign: "center",
+  },
+  // モバイル: 横の余白は無し、スポットライトは中央、下に内訳シート用の余白を確保。
+  backdropCompact: {
+    paddingRight: "4vmin",
+    paddingBottom: "46vh",
+    background:
+      "radial-gradient(circle at 50% 34%, rgba(10,20,45,0.55) 0%, rgba(2,4,12,0.82) 60%, rgba(0,0,0,0.92) 100%)",
   },
   stack: {
     display: "grid",

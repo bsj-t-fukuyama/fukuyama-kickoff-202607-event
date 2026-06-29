@@ -4,6 +4,7 @@ import { fetchNext, type QueueStats, type ScoredItem } from "./lib/api";
 import Background from "./components/Background";
 import IdleScreen from "./components/IdleScreen";
 import ScoringScene from "./components/ScoringScene";
+import ViewScene from "./components/ViewScene";
 import ResultScreen from "./components/ResultScreen";
 import ResultsButton from "./components/ResultsButton";
 import SkipButton from "./components/SkipButton";
@@ -15,6 +16,7 @@ import NotFound from "./components/NotFound";
 const SCORING_MS = 10_000; // one judging animation
 const IDLE_RETRY_MS = 4_000; // how often to look for new photos while idle
 const MAIN_PATH = "/main"; // 採点メイン画面の階層（これ以外の未定義パスは404）
+const VIEW_PATH = "/view"; // 観覧専用・モバイル向けスキャン画面（操作不可）
 const RESULT_PATH = "/result"; // 結果発表（暫定）画面の階層
 const SETTINGS_PATH = "/settings"; // 設定画面の階層
 
@@ -84,6 +86,7 @@ export default function App() {
   }, [item, advance]);
 
   const onMain = path === MAIN_PATH;
+  const onView = path === VIEW_PATH;
   const onResult = path === RESULT_PATH;
   const onSettings = path === SETTINGS_PATH;
 
@@ -94,6 +97,27 @@ export default function App() {
           <ResultScreen key="result" onBack={() => navigate(MAIN_PATH)} />
         ) : onSettings ? (
           <SettingsScreen key="settings" onBack={() => navigate(MAIN_PATH)} />
+        ) : onView ? (
+          <motion.div
+            key="view"
+            style={{ height: "100%" }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.2 } }}
+          >
+            {/* 観覧専用: 操作ボタンは一切出さない。スキャンの様子だけが見える。 */}
+            {item ? (
+              <ViewScene
+                key={item.id}
+                item={item}
+                stats={stats}
+                durationMs={SCORING_MS}
+                onComplete={handleComplete}
+              />
+            ) : (
+              <IdleScreen stats={stats} />
+            )}
+          </motion.div>
         ) : onMain ? (
           <motion.div
             key="main"
