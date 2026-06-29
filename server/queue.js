@@ -15,6 +15,10 @@ export function createQueue(provider) {
   // Ordered list of scored items. Index in this array IS the cursor space.
   const items = [];
   const seen = new Set();
+  // スキャン稼働フラグ。false の間はポーリング（写真の発見・採点）を行わない。
+  // 既定は false で、/main の「スタート！」から /api/start で開始する。リセット後も
+  // 自動では始まらず、再度スタートを押すまで止まったまま。
+  let running = false;
 
   const useAI = config.judge.provider === "ai";
   // One shared client across all images keeps the connection warm.
@@ -63,6 +67,7 @@ export function createQueue(provider) {
   }
 
   async function poll() {
+    if (!running) return; // スタート前／リセット後は何もスキャンしない。
     try {
       const found = await provider.list();
       for (const f of found) {
@@ -100,6 +105,7 @@ export function createQueue(provider) {
         pending: Math.max(0, items.length - (c + 1)),
         theme: config.theme,
         provider: provider.name,
+        running,
       },
     };
   }
@@ -117,17 +123,31 @@ export function createQueue(provider) {
   }
 
   async function start() {
+    // 起動時はスキャン済みidの読み込みだけ行い、ポーリング枠を用意する。実際の発見・
+    // 採点は running=true（スタート）になってから。poll() は running=false の間 no-op。
     await loadScanned();
-    await poll();
     return setInterval(poll, config.pollIntervalMs);
   }
 
-  // 集計をリセット: 採点済みリストと seen をクリアして 1 から再スキャンできる状態に戻す。
+  function isRunning() {
+    return running;
+  }
+
+  // スキャンの開始/停止。開始時は即座に1回ポーリングして写真を拾い始める。
+  function setRunning(value) {
+    running = !!value;
+    if (running) poll().catch((err) => console.error("[queue] start poll failed:", err.message));
+    return running;
+  }
+
+  // 集計をリセット: 採点済みリストと seen をクリアし、スキャンを停止状態に戻す。
   // （シート側のクリアは呼び出し元が resetSheet() で先に行う前提）。
+  // 自動では再スキャンしない＝再度スタートを押すまで止まったまま。
   function reset() {
+    running = false;
     items.length = 0;
     seen.clear();
   }
 
-  return { start, next, poll, reset };
+  return { start, next, poll, reset, setRunning, isRunning };
 }

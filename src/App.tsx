@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useLeaderQueue } from "./lib/useLeaderQueue";
 import { useFollowerQueue } from "./lib/useFollowerQueue";
+import { fetchRunning, startScan } from "./lib/api";
 import Background from "./components/Background";
 import IdleScreen from "./components/IdleScreen";
 import ScoringScene from "./components/ScoringScene";
@@ -12,6 +13,7 @@ import SkipButton from "./components/SkipButton";
 import PrevButton from "./components/PrevButton";
 import SettingsScreen from "./components/SettingsScreen";
 import SettingsButton from "./components/SettingsButton";
+import StartScreen from "./components/StartScreen";
 import PostUpload from "./components/PostUpload";
 import NotFound from "./components/NotFound";
 
@@ -28,6 +30,9 @@ export default function App() {
   const [path, setPath] = useState<string>(() => window.location.pathname);
   // 結果/設定画面から「戻る」で帰る先（開いた元の画面）。/view から開いたら /view へ。
   const [returnPath, setReturnPath] = useState<string>(MAIN_PATH);
+  // スキャン稼働状態（null=取得中）。false の間は /main にスタート画面を出す。
+  const [running, setRunning] = useState<boolean | null>(null);
+  const [starting, setStarting] = useState(false);
 
   const onMain = path === MAIN_PATH;
   const onView = path === VIEW_PATH;
@@ -35,8 +40,33 @@ export default function App() {
   const onSettings = path === SETTINGS_PATH;
 
   // /main は主導（キューを歩いて採点・上演状態を報告）、/view は追従（/main に同期）。
-  const leader = useLeaderQueue(onMain);
+  // 主導はスキャン稼働中（スタート後）のみ動かす。
+  const leader = useLeaderQueue(onMain && running === true);
   const follower = useFollowerQueue(onView);
+
+  // /main に入ったら稼働状態を取得（リセット後の全リロードでもここで再取得される）。
+  useEffect(() => {
+    if (!onMain) return;
+    let alive = true;
+    fetchRunning()
+      .then((r) => alive && setRunning(r))
+      .catch(() => alive && setRunning(false));
+    return () => {
+      alive = false;
+    };
+  }, [onMain]);
+
+  const handleStart = useCallback(async () => {
+    setStarting(true);
+    try {
+      await startScan();
+      setRunning(true);
+    } catch {
+      /* 失敗時はスタート画面のまま */
+    } finally {
+      setStarting(false);
+    }
+  }, []);
 
   // ブラウザの戻る/進むにも追従する。
   useEffect(() => {
@@ -95,7 +125,10 @@ export default function App() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, transition: { duration: 0.2 } }}
           >
-            {leader.item ? (
+            {running !== true ? (
+              // スタート前／リセット後: スタート画面。押すまでスキャンは始まらない。
+              <StartScreen onStart={handleStart} starting={starting} />
+            ) : leader.item ? (
               <ScoringScene
                 key={leader.item.id}
                 item={leader.item}

@@ -34,6 +34,7 @@ export type QueueStats = {
   pending: number;
   theme: string;
   provider: string;
+  running?: boolean; // スキャン稼働中か（スタート前/リセット後は false）
 };
 
 export type NextResponse = {
@@ -70,6 +71,21 @@ export async function reportIdle(): Promise<void> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ index: null }),
   });
+}
+
+// --- スキャンの開始（スタート画面） ---------------------------------------
+// 現在スキャンが稼働中か。/main がスタート画面を出すか判定するのに使う。
+export async function fetchRunning(): Promise<boolean> {
+  const res = await fetch("/api/state");
+  if (!res.ok) throw new Error(`/api/state ${res.status}`);
+  const data = await res.json();
+  return !!data.running;
+}
+
+// 「スタート！」: スキャンを開始する。
+export async function startScan(): Promise<void> {
+  const res = await fetch("/api/start", { method: "POST" });
+  if (!res.ok) throw new Error(`/api/start ${res.status}`);
 }
 
 // /view がポーリングして現在の上演状態を取得する。

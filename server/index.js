@@ -84,9 +84,9 @@ app.get("/api/results", async (_req, res) => {
 app.post("/api/reset", async (_req, res) => {
   try {
     await resetSheet(); // 1) シートのデータ行を消去
-    queue.reset(); // 2) サーバーの seen / items をクリア
+    queue.reset(); // 2) サーバーの seen / items をクリアし、スキャンを停止状態に戻す
     presentation = null; // 上演状態もクリア（/view を待機に戻す）
-    queue.poll().catch((err) => console.error("[reset] re-scan poll failed:", err.message)); // 3) 再スキャン開始
+    // ※自動では再スキャンしない。/main の「スタート！」(/api/start) を押すまで止めておく。
     res.json({ ok: true });
   } catch (err) {
     console.error("[reset]", err.message);
@@ -128,6 +128,15 @@ app.post("/api/upload", async (req, res) => {
     console.error("[upload]", err.message);
     res.status(502).json({ ok: false, error: err.message });
   }
+});
+
+// スキャンの稼働状態。/main がスタート画面を出すか判定するのに使う。
+app.get("/api/state", (_req, res) => res.json({ running: queue.isRunning() }));
+
+// 「スタート！」: スキャンを開始する（写真の発見・採点・上演を始める）。
+app.post("/api/start", (_req, res) => {
+  queue.setRunning(true);
+  res.json({ ok: true, running: true });
 });
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
