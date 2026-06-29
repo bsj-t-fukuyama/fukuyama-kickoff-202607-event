@@ -99,7 +99,13 @@ app.post("/api/reset", async (_req, res) => {
 let presentation = null; // { index, startedAt(ms, server time) }
 
 app.post("/api/presentation", (req, res) => {
-  const index = Number(req.body?.index);
+  const raw = req.body?.index;
+  // index:null は「主導側がアイドル（次の写真待ち）」の合図 → 上演状態をクリア。
+  if (raw === null || raw === undefined) {
+    presentation = null;
+    return res.json({ ok: true, idle: true });
+  }
+  const index = Number(raw);
   if (!Number.isFinite(index)) return res.status(400).json({ ok: false, error: "bad index" });
   presentation = { index, startedAt: Date.now() };
   res.json({ ok: true });

@@ -68,7 +68,7 @@ export const config = {
   pollIntervalMs: Number(process.env.POLL_INTERVAL_MS ?? 8_000),
 
   // The current お題 (theme) shown on screen and used by the scorer.
-  theme: process.env.THEME ?? "最高の乾杯",
+  theme: process.env.THEME ?? "BRAVE THROUGH",
 
   // Weights for each scoring axis (see README-SCORING.md). The four axes:
   // みんなで・楽しく・気持ちよく・はっきり 写っているか。

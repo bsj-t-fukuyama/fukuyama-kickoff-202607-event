@@ -89,12 +89,6 @@ export default function ViewScene({
         </div>
       </div>
 
-      <div style={styles.footer} className="mono">
-        <span>SCANNED {stats?.shown ?? 0}</span>
-        <span style={{ color: "var(--blue-glow)" }}>QUEUE {stats?.pending ?? 0}</span>
-        <span>SRC {(stats?.provider ?? "—").toUpperCase()}</span>
-      </div>
-
       <RevealOverlay
         compact
         show={revealed}
@@ -206,14 +200,6 @@ const styles: Record<string, React.CSSProperties> = {
     gap: "0.4rem",
   },
   statusLine: { fontSize: "clamp(0.8rem, 3vw, 1.05rem)", minHeight: "1.4em" },
-  footer: {
-    display: "flex",
-    gap: "clamp(1rem, 5vw, 2.2rem)",
-    fontSize: "clamp(0.62rem, 2.6vw, 0.8rem)",
-    color: "var(--text-dim)",
-    letterSpacing: "0.12em",
-    justifyContent: "center",
-  },
 };
 
 const sheetStyles: Record<string, React.CSSProperties> = {

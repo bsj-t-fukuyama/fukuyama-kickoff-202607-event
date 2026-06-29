@@ -63,6 +63,15 @@ export async function reportPresentation(index: number): Promise<void> {
   });
 }
 
+// /main が次の写真待ち（アイドル）になったら呼ぶ: /view も待機画面へ戻す。
+export async function reportIdle(): Promise<void> {
+  await fetch("/api/presentation", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ index: null }),
+  });
+}
+
 // /view がポーリングして現在の上演状態を取得する。
 export async function fetchPresentation(): Promise<Presentation> {
   const res = await fetch("/api/presentation");

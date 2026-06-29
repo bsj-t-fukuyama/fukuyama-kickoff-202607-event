@@ -2,7 +2,14 @@ import { motion } from "framer-motion";
 import type { QueueStats } from "../lib/api";
 
 // Shown when there are no unscanned photos. A calm, looping "standby" state.
-export default function IdleScreen({ stats }: { stats: QueueStats | null }) {
+// hideStats: /view（参加者スマホ）では下部の SCANNED / QUEUE / SRC は出さない。
+export default function IdleScreen({
+  stats,
+  hideStats = false,
+}: {
+  stats: QueueStats | null;
+  hideStats?: boolean;
+}) {
   return (
     <div style={styles.root}>
       <motion.div
@@ -37,11 +44,13 @@ export default function IdleScreen({ stats }: { stats: QueueStats | null }) {
         新しい写真を待機中…
       </motion.div>
 
-      <div style={styles.footer} className="mono">
-        <span>SCANNED {stats?.shown ?? 0}</span>
-        <span style={{ color: "var(--blue-glow)" }}>QUEUE {stats?.pending ?? 0}</span>
-        <span>SRC {(stats?.provider ?? "—").toUpperCase()}</span>
-      </div>
+      {!hideStats && (
+        <div style={styles.footer} className="mono">
+          <span>SCANNED {stats?.shown ?? 0}</span>
+          <span style={{ color: "var(--blue-glow)" }}>QUEUE {stats?.pending ?? 0}</span>
+          <span>SRC {(stats?.provider ?? "—").toUpperCase()}</span>
+        </div>
+      )}
     </div>
   );
 }

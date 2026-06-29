@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { fetchNext, reportPresentation, type QueueStats, type ScoredItem } from "./api";
+import { fetchNext, reportPresentation, reportIdle, type QueueStats, type ScoredItem } from "./api";
 
 const IDLE_RETRY_MS = 4_000; // how often to look for new photos while idle
 
@@ -36,10 +36,12 @@ export function useLeaderQueue(enabled: boolean) {
     return () => window.clearTimeout(timerRef.current);
   }, [enabled, advance]);
 
-  // 写真が変わるたびに表示開始を報告（サーバーが開始時刻を刻む）。
+  // 写真が変わるたびに表示開始を報告（サーバーが開始時刻を刻む）。次の写真待ち
+  // （item=null）になったらアイドルを報告し、/view も待機画面へ戻す。
   useEffect(() => {
-    if (!enabled || !item) return;
-    reportPresentation(item.index).catch(() => {});
+    if (!enabled) return;
+    if (item) reportPresentation(item.index).catch(() => {});
+    else reportIdle().catch(() => {});
   }, [enabled, item]);
 
   const handleComplete = useCallback(() => {

@@ -73,7 +73,7 @@ export default function App() {
                 onComplete={noop}
               />
             ) : (
-              <IdleScreen stats={follower.stats} />
+              <IdleScreen stats={follower.stats} hideStats />
             )}
           </motion.div>
         ) : onMain ? (
