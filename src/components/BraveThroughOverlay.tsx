@@ -136,7 +136,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   text: {
     whiteSpace: "nowrap",
-    fontSize: "clamp(3rem, 13vw, 12rem)",
+    fontSize: "clamp(1.4rem, 6vw, 5.5rem)",
     fontWeight: 900,
     fontStyle: "italic",
     letterSpacing: "-0.03em",
