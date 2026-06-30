@@ -200,11 +200,6 @@ function ResultCard({
         <span style={styles.scoreUnit}>点</span>
       </div>
 
-      {entry.name && (
-        <div style={styles.caption} className="mono">
-          {entry.name}
-        </div>
-      )}
     </div>
   );
 }

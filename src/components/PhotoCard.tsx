@@ -105,9 +105,6 @@ export default function PhotoCard({
         <span style={{ ...styles.bracket, ...styles.br }} />
 
         <div style={styles.metaWrap} className="mono">
-          <div style={styles.meta}>
-            <span style={styles.dot} /> {item.name}
-          </div>
           <div style={styles.id}>ID {item.id}</div>
         </div>
       </motion.div>
