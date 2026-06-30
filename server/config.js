@@ -87,6 +87,10 @@ export const config = {
   // possible scores (8〜100) so good and great shots pull clearly apart.
   scoreFloor: Number(process.env.FLOOR ?? 8),
 
+  // BRAVE THROUGH ボーナスの発動確率（0..1）。50点以下の写真が、この確率で
+  // 70〜91点へ格上げされる。既定 0.1（10%）。/settings から実行時に変更できる。
+  bonusChance: Number(process.env.BONUS_CHANCE ?? 0.1),
+
   // Scorer selection:
   //   "ai"    – Claude vision judges the real pixels (server/scorer/aiScorer.js)
   //   "dummy" – stable random numbers, no API call (server/scorer/index.js)

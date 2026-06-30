@@ -40,10 +40,27 @@ export function setSheetWebhookUrl(url) {
   persist();
 }
 
+// BRAVE THROUGH ボーナスの発動確率（0..1）。未設定なら config の既定値。
+export function getBonusChance() {
+  const saved = state.bonusChance;
+  if (typeof saved === "number" && Number.isFinite(saved)) {
+    return Math.min(1, Math.max(0, saved));
+  }
+  return Math.min(1, Math.max(0, Number(config.bonusChance) || 0));
+}
+
+export function setBonusChance(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return;
+  state.bonusChance = Math.min(1, Math.max(0, n));
+  persist();
+}
+
 // 設定画面へ返すスナップショット。
 export function getSettings() {
   return {
     sheetWebhookUrl: getSheetWebhookUrl(),
+    bonusChance: getBonusChance(),
     driveUrl: config.google.folderId
       ? `https://drive.google.com/drive/folders/${config.google.folderId}`
       : "",

@@ -130,10 +130,14 @@ export const BONUS_CHANCE = 0.1; // 発動確率
 export const BONUS_MIN = 70; // 格上げ後の下限
 export const BONUS_MAX = 91; // 格上げ後の上限
 
-export function maybeBraveThroughBonus(result, { weights, floor = DEFAULT_FLOOR, seed }) {
+export function maybeBraveThroughBonus(
+  result,
+  { weights, floor = DEFAULT_FLOOR, seed, chance = BONUS_CHANCE },
+) {
   if (!result || result.score > BONUS_THRESHOLD) return result;
+  if (!(chance > 0)) return result;
   const rand = seededRandom(`${seed}:bravethrough`);
-  if (rand() >= BONUS_CHANCE) return result;
+  if (rand() >= chance) return result;
 
   const from = result.score;
   const target = BONUS_MIN + Math.floor(rand() * (BONUS_MAX - BONUS_MIN + 1)); // 70..91
@@ -145,7 +149,7 @@ export function maybeBraveThroughBonus(result, { weights, floor = DEFAULT_FLOOR,
   return { ...composed, bonus: { applied: true, from, to: composed.score } };
 }
 
-export function scoreImage(item, { theme, weights, floor = DEFAULT_FLOOR }) {
+export function scoreImage(item, { theme, weights, floor = DEFAULT_FLOOR, bonusChance }) {
   const rand = seededRandom(`${item.id}:${theme}`);
   // 加点方式: every axis starts from `floor` and earns the remaining headroom.
   const values = {};
@@ -157,7 +161,12 @@ export function scoreImage(item, { theme, weights, floor = DEFAULT_FLOOR }) {
   values.people = peopleAxisValue(peopleCount, item.id);
 
   const base = composeResult(values, { weights, floor });
-  const result = maybeBraveThroughBonus(base, { weights, floor, seed: `${item.id}:${theme}` });
+  const result = maybeBraveThroughBonus(base, {
+    weights,
+    floor,
+    seed: `${item.id}:${theme}`,
+    chance: bonusChance,
+  });
 
   // AI 判定と同じ shape を返すため signals も用意する（UI のチップ/人数表示用）。
   // ※これはモックの推定値で、実際の画素判定ではない点に注意。

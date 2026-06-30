@@ -5,7 +5,7 @@ import cors from "cors";
 import { config } from "./config.js";
 import { createDriveProvider } from "./drive/index.js";
 import { createQueue } from "./queue.js";
-import { getSettings, setSheetWebhookUrl } from "./settings.js";
+import { getSettings, setSheetWebhookUrl, setBonusChance } from "./settings.js";
 import { fetchTopResults, resetSheet } from "./sheets/index.js";
 import { uploadToDrive } from "./upload.js";
 
@@ -57,8 +57,9 @@ app.get("/api/image/:id", async (req, res) => {
 // Editable runtime settings (currently the Sheet save destination URL).
 app.get("/api/settings", (_req, res) => res.json(getSettings()));
 app.post("/api/settings", (req, res) => {
-  const { sheetWebhookUrl } = req.body ?? {};
+  const { sheetWebhookUrl, bonusChance } = req.body ?? {};
   if (typeof sheetWebhookUrl === "string") setSheetWebhookUrl(sheetWebhookUrl);
+  if (bonusChance != null && Number.isFinite(Number(bonusChance))) setBonusChance(bonusChance);
   res.json(getSettings());
 });
 

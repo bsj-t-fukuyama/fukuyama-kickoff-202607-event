@@ -10,6 +10,7 @@ import { config } from "./config.js";
 import { scoreImage } from "./scorer/index.js";
 import { scoreImageWithAI, createJudgeClient } from "./scorer/aiScorer.js";
 import { createSheetsStore, fetchScannedIds } from "./sheets/index.js";
+import { getBonusChance } from "./settings.js";
 
 export function createQueue(provider) {
   // Ordered list of scored items. Index in this array IS the cursor space.
@@ -49,6 +50,8 @@ export function createQueue(provider) {
       theme: config.theme,
       weights: config.weights,
       floor: config.scoreFloor,
+      // /settings から変更できる実行時の発動確率（毎回読むので即反映される）。
+      bonusChance: getBonusChance(),
     };
     if (useAI) {
       try {

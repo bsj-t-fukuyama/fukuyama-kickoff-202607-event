@@ -56,6 +56,25 @@ export async function saveSheetWebhookUrl(url: string): Promise<string> {
   return typeof data.sheetWebhookUrl === "string" ? data.sheetWebhookUrl : "";
 }
 
+// --- BRAVE THROUGH ボーナスの発動確率 (0..1, サーバー永続) -------------------
+export async function fetchBonusChance(): Promise<number> {
+  const res = await fetch("/api/settings");
+  if (!res.ok) throw new Error(`/api/settings ${res.status}`);
+  const data = await res.json();
+  return typeof data.bonusChance === "number" ? data.bonusChance : 0.1;
+}
+
+export async function saveBonusChance(chance: number): Promise<number> {
+  const res = await fetch("/api/settings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ bonusChance: chance }),
+  });
+  if (!res.ok) throw new Error(`/api/settings ${res.status}`);
+  const data = await res.json();
+  return typeof data.bonusChance === "number" ? data.bonusChance : chance;
+}
+
 // --- ランキングのリセット --------------------------------------------------
 // シートをヘッダのみに戻し、サーバーの集計もクリアして 1 から再スキャンさせる。
 export async function resetRanking(): Promise<void> {

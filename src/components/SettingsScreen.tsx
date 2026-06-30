@@ -7,6 +7,8 @@ import {
   saveDriveUrl,
   fetchSheetWebhookUrl,
   saveSheetWebhookUrl,
+  fetchBonusChance,
+  saveBonusChance,
   resetRanking,
 } from "../lib/settings";
 
@@ -32,6 +34,8 @@ export default function SettingsScreen({ onBack }: { onBack: () => void }) {
   const [driveUrl, setDriveUrl] = useState("");
   const [serverUrl, setServerUrl] = useState("");
   const [webhookUrl, setWebhookUrl] = useState("");
+  // ボーナス発動確率は % で編集する（保存時に 0..1 へ換算）。
+  const [bonusPct, setBonusPct] = useState("10");
   const [saved, setSaved] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [resetting, setResetting] = useState(false);
@@ -54,6 +58,10 @@ export default function SettingsScreen({ onBack }: { onBack: () => void }) {
     fetchSheetWebhookUrl()
       .then((url) => alive && setWebhookUrl(url))
       .catch(() => {});
+    // ボーナス発動確率（0..1）→ % で表示。
+    fetchBonusChance()
+      .then((c) => alive && setBonusPct(String(Math.round(c * 100))))
+      .catch(() => {});
     return () => {
       alive = false;
     };
@@ -63,6 +71,10 @@ export default function SettingsScreen({ onBack }: { onBack: () => void }) {
     await saveDriveUrl(driveUrl.trim());
     const url = await saveSheetWebhookUrl(webhookUrl.trim());
     setWebhookUrl(url);
+    // % を 0..1 にして保存し、サーバーが丸めた値を再表示。
+    const pct = Math.min(100, Math.max(0, Number(bonusPct) || 0));
+    const savedChance = await saveBonusChance(pct / 100);
+    setBonusPct(String(Math.round(savedChance * 100)));
     setSaved(true);
     window.setTimeout(() => setSaved(false), 1800);
   }
@@ -143,6 +155,30 @@ export default function SettingsScreen({ onBack }: { onBack: () => void }) {
           spellCheck={false}
           autoComplete="off"
         />
+
+        <div style={styles.divider} />
+
+        <label style={styles.label} htmlFor="bonusPct">
+          BRAVE THROUGH ボーナスの発生確率
+        </label>
+        <p style={styles.hint}>
+          50点以下の写真が 70〜91点へ格上げされる確率（%）。既定は 10%。0 にすると発動しません。
+        </p>
+        <div style={styles.pctRow}>
+          <input
+            id="bonusPct"
+            type="number"
+            min={0}
+            max={100}
+            step={1}
+            value={bonusPct}
+            onChange={(e) => setBonusPct(e.target.value)}
+            style={{ ...styles.input, ...styles.pctInput }}
+            spellCheck={false}
+            autoComplete="off"
+          />
+          <span style={styles.pctUnit}>%</span>
+        </div>
 
         <div style={styles.actions}>
           <button type="button" onClick={handleSave} style={styles.saveBtn}>
@@ -279,6 +315,9 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "var(--mono)",
     letterSpacing: "0.01em",
   },
+  pctRow: { display: "flex", alignItems: "center", gap: "0.6rem", marginTop: "0.4rem" },
+  pctInput: { width: "min(140px, 40vw)", marginTop: 0, textAlign: "right" },
+  pctUnit: { fontSize: "clamp(1rem, 1.6vw, 1.3rem)", fontWeight: 700, color: "var(--text-dim)" },
   actions: { display: "flex", alignItems: "center", gap: "1rem", marginTop: "0.8rem" },
   saveBtn: {
     padding: "0.7rem 1.6rem",

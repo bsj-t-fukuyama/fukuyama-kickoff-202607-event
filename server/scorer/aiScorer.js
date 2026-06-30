@@ -123,7 +123,7 @@ export function createJudgeClient(apiKey) {
 
 export async function scoreImageWithAI(
   item,
-  { theme, weights, floor = DEFAULT_FLOOR, image, model = DEFAULT_JUDGE_MODEL, client },
+  { theme, weights, floor = DEFAULT_FLOOR, bonusChance, image, model = DEFAULT_JUDGE_MODEL, client },
 ) {
   if (!image?.base64) throw new Error("no image bytes to judge");
   const anthropic = client ?? createJudgeClient();
@@ -171,6 +171,6 @@ export async function scoreImageWithAI(
 
   // 比重は config.weights（mood/composition/clarity 各0.20、people 0.40）をそのまま使う。
   const base = composeResult(biasFromSignals(axisValues, signals, item.id), { weights, floor });
-  const result = maybeBraveThroughBonus(base, { weights, floor, seed: item.id });
+  const result = maybeBraveThroughBonus(base, { weights, floor, seed: item.id, chance: bonusChance });
   return { ...result, signals };
 }
