@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { fetchNext, fetchPresentation, type QueueStats, type ScoredItem } from "./api";
 
-const POLL_MS = 800; // 上演状態を見に行く間隔（写真切替への追従の速さ）
+const POLL_MS = 1500; // 上演状態を見に行く間隔（写真切替への追従の速さ）。
+// 多人数(/view)同時接続でもサーバー負荷を抑えるため広めに。100人で約66req/s。
+// 写真は約10秒ごとの切替なので、1.5秒間隔でも追従の体感はほぼ変わらない。
 
 // /view（参加者スマホ・追従）のキュー。自分ではキューを歩かず、/main が報告した
 // 「現在の上演状態」をポーリングし、同じ写真を取得して“表示開始からの経過ぶん”

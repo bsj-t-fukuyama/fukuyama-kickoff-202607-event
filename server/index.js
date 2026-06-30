@@ -17,8 +17,9 @@ const queue = createQueue(provider);
 
 const app = express();
 app.use(cors());
-// 参加者がアップする写真(base64)を受けるため上限を上げる（圧縮済みでも数MB想定）。
-app.use(express.json({ limit: "25mb" }));
+// 参加者がアップする写真(base64)を受ける。クライアントで長辺1600px・JPEG化済みなので
+// 実体は概ね 0.4〜2MB。上限は十分な余裕を見て 8mb（同時投稿時のメモリ暴発を抑える）。
+app.use(express.json({ limit: "8mb" }));
 
 // Next unscanned image after the given cursor (-1 to start from the beginning).
 app.get("/api/next", (req, res) => {

@@ -11,7 +11,7 @@ export type PreparedImage = {
 export async function prepareImage(
   file: File,
   maxDim = 1600,
-  quality = 0.85,
+  quality = 0.8, // 0.85→0.8: 大画面の見栄えはほぼ維持しつつ、送信サイズを2〜3割削減。
 ): Promise<PreparedImage> {
   const url = URL.createObjectURL(file);
   try {
