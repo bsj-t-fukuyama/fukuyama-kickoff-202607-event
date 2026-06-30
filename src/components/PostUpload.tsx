@@ -75,19 +75,19 @@ export default function PostUpload() {
         style={{ display: "none" }}
       />
 
-      {/* フローティングボタン（ボタンの上に小さく「投稿する」） */}
+      {/* フローティングボタン（横長・角丸の「＋ 投稿する」） */}
       <div style={styles.fabWrap}>
-        <span style={styles.fabLabel}>投稿する</span>
         <motion.button
           type="button"
           onClick={openPicker}
           style={styles.fab}
-          whileHover={{ scale: 1.06 }}
-          whileTap={{ scale: 0.92 }}
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ scale: 0.94 }}
           aria-label="写真を投稿する"
           disabled={busy}
         >
-          {phase === "preparing" ? "…" : "＋"}
+          <span style={styles.fabPlus}>{phase === "preparing" ? "…" : "＋"}</span>
+          <span style={styles.fabText}>投稿する</span>
         </motion.button>
       </div>
 
@@ -163,31 +163,24 @@ const styles: Record<string, React.CSSProperties> = {
     bottom: "max(20px, env(safe-area-inset-bottom))",
     zIndex: 10005,
     display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: 6,
     pointerEvents: "auto",
   },
-  fabLabel: {
-    fontSize: "0.72rem",
-    fontWeight: 700,
-    letterSpacing: "0.08em",
-    color: "var(--blue-glow)",
-    textShadow: "0 1px 6px rgba(0,0,0,0.6)",
-  },
+  // 横長・角丸の長方形ボタン。高さは元の丸ボタン(64px)の約80%。
   fab: {
-    width: 64,
-    height: 64,
-    borderRadius: "50%",
+    height: 51,
+    padding: "0 18px",
+    borderRadius: 16,
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
     border: "1px solid rgba(56,182,255,0.55)",
     background: "linear-gradient(160deg, #1fa2ff, #0066ff)",
     color: "#fff",
-    fontSize: "2rem",
-    fontWeight: 800,
-    lineHeight: 1,
     cursor: "pointer",
-    boxShadow: "0 10px 28px rgba(1,90,255,0.5), 0 0 0 6px rgba(56,182,255,0.12)",
+    boxShadow: "0 10px 28px rgba(1,90,255,0.5), 0 0 0 5px rgba(56,182,255,0.12)",
   },
+  fabPlus: { fontSize: "1.5rem", fontWeight: 800, lineHeight: 1 },
+  fabText: { fontSize: "0.95rem", fontWeight: 800, letterSpacing: "0.06em" },
   backdrop: {
     position: "fixed",
     inset: 0,

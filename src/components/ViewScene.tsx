@@ -280,9 +280,11 @@ const sheetStyles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     gap: "clamp(0.6rem, 1.6vh, 1rem)",
-    maxHeight: "62vh",
+    maxHeight: "72vh",
     overflowY: "auto",
-    padding: "0.2rem clamp(0.9rem, 4vw, 1.4rem) calc(env(safe-area-inset-bottom) + 1rem)",
+    // 右下の「投稿する」ボタンに最後の項目の点数が隠れないよう下に余白を確保する
+    // （シートの高さが少し大きくなってよい＝点数がボタンの上に逃げる）。
+    padding: "0.2rem clamp(0.9rem, 4vw, 1.4rem) calc(env(safe-area-inset-bottom) + 96px)",
   },
   block: { display: "grid", gap: "0.3rem" },
   axisTop: { display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "0.6rem" },
