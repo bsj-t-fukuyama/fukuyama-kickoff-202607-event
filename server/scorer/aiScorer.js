@@ -15,7 +15,7 @@
 // provider). On any failure the caller falls back to the dummy scorer.
 
 import Anthropic from "@anthropic-ai/sdk";
-import { AXES, composeResult, DEFAULT_FLOOR, peopleAxisValue } from "./index.js";
+import { AXES, composeResult, DEFAULT_FLOOR, maybeBraveThroughBonus, peopleAxisValue } from "./index.js";
 
 export const DEFAULT_JUDGE_MODEL = "claude-opus-4-8";
 
@@ -170,6 +170,7 @@ export async function scoreImageWithAI(
   for (const axis of AXES) axisValues[axis.key] = parsed[axis.key];
 
   // 比重は config.weights（mood/composition/clarity 各0.20、people 0.40）をそのまま使う。
-  const result = composeResult(biasFromSignals(axisValues, signals, item.id), { weights, floor });
+  const base = composeResult(biasFromSignals(axisValues, signals, item.id), { weights, floor });
+  const result = maybeBraveThroughBonus(base, { weights, floor, seed: item.id });
   return { ...result, signals };
 }

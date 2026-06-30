@@ -5,9 +5,11 @@ import { motion } from "framer-motion";
 export default function StartScreen({
   onStart,
   starting,
+  onUsage,
 }: {
   onStart: () => void;
   starting: boolean;
+  onUsage: () => void;
 }) {
   return (
     <div style={styles.root}>
@@ -50,6 +52,19 @@ export default function StartScreen({
           "スタート！"
         )}
       </motion.button>
+
+      <motion.button
+        type="button"
+        onClick={onUsage}
+        style={styles.usage}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5, duration: 0.6 }}
+        whileHover={{ scale: 1.04 }}
+        whileTap={{ scale: 0.97 }}
+      >
+        📖 使い方を見る
+      </motion.button>
     </div>
   );
 }
@@ -91,6 +106,19 @@ const styles: Record<string, React.CSSProperties> = {
     background: "linear-gradient(160deg, #1fa2ff, #0066ff)",
     cursor: "pointer",
     boxShadow: "0 16px 44px rgba(1,90,255,0.5), 0 0 0 8px rgba(56,182,255,0.1)",
+  },
+  usage: {
+    marginTop: "0.2rem",
+    fontSize: "clamp(0.9rem, 1.6vw, 1.1rem)",
+    fontWeight: 700,
+    letterSpacing: "0.06em",
+    color: "var(--text)",
+    background: "rgba(120,170,255,0.1)",
+    border: "1px solid var(--line)",
+    borderRadius: 999,
+    padding: "0.6rem 1.4rem",
+    cursor: "pointer",
+    fontFamily: "var(--font)",
   },
   starting: { display: "inline-flex", alignItems: "center", gap: "0.7rem" },
   spinner: {

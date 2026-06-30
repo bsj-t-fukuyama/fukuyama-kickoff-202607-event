@@ -2,10 +2,13 @@ import { useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { QueueStats, ScoredItem } from "../lib/api";
 import { pickComment } from "../lib/comments";
+import { gradeFor } from "../lib/grade";
 import { useScoringClock } from "../lib/useScoringClock";
+import { useBonusReveal } from "../lib/useBonusReveal";
 import PhotoCard from "./PhotoCard";
 import ScoreGauge from "./ScoreGauge";
 import RevealOverlay from "./RevealOverlay";
+import BraveThroughOverlay from "./BraveThroughOverlay";
 import CriteriaWidget from "./CriteriaWidget";
 
 const REVEAL_LABEL: Record<string, string> = {
@@ -27,11 +30,17 @@ export default function ScoringScene({
   durationMs: number;
   onComplete: () => void;
 }) {
-  const { display, fraction, scanning, revealed } = useScoringClock(
-    item.score,
-    durationMs,
-    onComplete,
-  );
+  // ボーナス時はまず低い点(from)へ向けて採点し、後で from→to へせり上げる。
+  const baseScore = item.bonus?.applied ? item.bonus.from : item.score;
+  const { display, scanning, revealed } = useScoringClock(baseScore, durationMs, onComplete);
+  const bonus = useBonusReveal(item.bonus, revealed);
+
+  // 表示する点数: ボーナス演出中はその値、通常はクロックの表示値。
+  const shown = bonus.value ?? display;
+  const fraction = Math.max(0, Math.min(1, shown / 100));
+  const grade = gradeFor(shown); // せり上がりに合わせてグレードも昇格する
+  // 通常の大リザルト演出は、ボーナス無し or ボーナスのせり上がり完了後に出す。
+  const bonusDone = !bonus.active || bonus.phase === "done";
 
   // Pick the big reaction comment once per photo (stable across re-renders).
   const comment = useMemo(
@@ -51,7 +60,7 @@ export default function ScoringScene({
         </div>
 
         <div style={styles.panel}>
-          <ScoreGauge display={display} fraction={fraction} grade={item.grade} revealed={revealed} />
+          <ScoreGauge display={shown} fraction={fraction} grade={grade} revealed={revealed} />
 
           <div style={styles.statusLine} className="mono">
             <AnimatePresence mode="wait">
@@ -62,7 +71,7 @@ export default function ScoringScene({
                   animate={{ opacity: 1, y: 0 }}
                   style={{ color: "var(--blue-glow)", letterSpacing: "0.28em" }}
                 >
-                  {REVEAL_LABEL[item.grade] ?? "RESULT"}
+                  {REVEAL_LABEL[grade] ?? "RESULT"}
                 </motion.span>
               ) : (
                 <motion.span
@@ -88,14 +97,19 @@ export default function ScoringScene({
       </div>
 
       <RevealOverlay
-        show={revealed}
+        show={revealed && bonusDone}
         score={item.score}
         badge={comment.badge}
         line={comment.line}
       />
 
-      {/* Floating 判定の内訳 button — only pressable while the score is shown. */}
-      <CriteriaWidget item={item} revealed={revealed} />
+      {/* BRAVE THROUGH ボーナスのシネマ演出（発動時のみ） */}
+      {bonus.active && item.bonus && (
+        <BraveThroughOverlay phase={bonus.phase} gain={item.bonus.to - item.bonus.from} />
+      )}
+
+      {/* Floating 判定の内訳 button — only pressable once the final score is shown. */}
+      <CriteriaWidget item={item} revealed={revealed && bonusDone} />
     </div>
   );
 }

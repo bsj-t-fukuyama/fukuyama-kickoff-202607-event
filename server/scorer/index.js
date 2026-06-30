@@ -119,6 +119,32 @@ export function composeResult(values, { weights, floor = DEFAULT_FLOOR } = {}) {
   return { score, grade: gradeFor(score), breakdown };
 }
 
+// --- BRAVE THROUGH ボーナス --------------------------------------------------
+// 50点以下の写真への救済チャンス。10% の確率で 70〜91点へ“格上げ”する（同じ写真
+// なら毎回同じ＝seed 固定）。格上げ時は、足りない得点を各軸へ按分して帳尻を合わせる:
+// どの軸も 100 へ向けて同じ割合 t だけ引き上げると重み付き平均がちょうど目標点になり、
+// かつどの軸も 100 を超えない（t = (target-from)/(100-from)）。結果の breakdown も
+// この引き上げ後の値で作り直すので、表示点の合計は新しいスコアにぴったり一致する。
+export const BONUS_THRESHOLD = 50; // この点数以下が対象
+export const BONUS_CHANCE = 0.1; // 発動確率
+export const BONUS_MIN = 70; // 格上げ後の下限
+export const BONUS_MAX = 91; // 格上げ後の上限
+
+export function maybeBraveThroughBonus(result, { weights, floor = DEFAULT_FLOOR, seed }) {
+  if (!result || result.score > BONUS_THRESHOLD) return result;
+  const rand = seededRandom(`${seed}:bravethrough`);
+  if (rand() >= BONUS_CHANCE) return result;
+
+  const from = result.score;
+  const target = BONUS_MIN + Math.floor(rand() * (BONUS_MAX - BONUS_MIN + 1)); // 70..91
+  const t = from >= 100 ? 0 : (target - from) / (100 - from);
+  const boosted = {};
+  for (const axis of result.breakdown) boosted[axis.key] = axis.value + t * (100 - axis.value);
+
+  const composed = composeResult(boosted, { weights, floor });
+  return { ...composed, bonus: { applied: true, from, to: composed.score } };
+}
+
 export function scoreImage(item, { theme, weights, floor = DEFAULT_FLOOR }) {
   const rand = seededRandom(`${item.id}:${theme}`);
   // 加点方式: every axis starts from `floor` and earns the remaining headroom.
@@ -130,7 +156,8 @@ export function scoreImage(item, { theme, weights, floor = DEFAULT_FLOOR }) {
   const peopleCount = 1 + Math.floor(rand() * 6); // 1..6
   values.people = peopleAxisValue(peopleCount, item.id);
 
-  const result = composeResult(values, { weights, floor });
+  const base = composeResult(values, { weights, floor });
+  const result = maybeBraveThroughBonus(base, { weights, floor, seed: `${item.id}:${theme}` });
 
   // AI 判定と同じ shape を返すため signals も用意する（UI のチップ/人数表示用）。
   // ※これはモックの推定値で、実際の画素判定ではない点に注意。

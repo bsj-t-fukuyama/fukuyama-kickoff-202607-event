@@ -2,11 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion, type PanInfo } from "framer-motion";
 import type { ScoredItem } from "../lib/api";
 import { pickComment } from "../lib/comments";
+import { gradeFor } from "../lib/grade";
 import { useScoringClock } from "../lib/useScoringClock";
+import { useBonusReveal } from "../lib/useBonusReveal";
 import { computeBreakdown } from "../lib/breakdown";
 import PhotoCard from "./PhotoCard";
 import ScoreGauge from "./ScoreGauge";
 import RevealOverlay from "./RevealOverlay";
+import BraveThroughOverlay from "./BraveThroughOverlay";
 
 // 観覧専用・モバイル特化のスキャン画面（/view）。
 //
@@ -35,12 +38,20 @@ export default function ViewScene({
   // /main の表示開始からの経過(ms)。これだけ進めた状態で再生し、リアルタイム同期する。
   offsetMs?: number;
 }) {
-  const { display, fraction, scanning, revealed } = useScoringClock(
-    item.score,
+  // ボーナス時はまず低い点(from)へ向けて採点し、後で from→to へせり上げる。
+  const baseScore = item.bonus?.applied ? item.bonus.from : item.score;
+  const { display, scanning, revealed } = useScoringClock(
+    baseScore,
     durationMs,
     onComplete,
     offsetMs,
   );
+  const bonus = useBonusReveal(item.bonus, revealed);
+
+  const shown = bonus.value ?? display;
+  const fraction = Math.max(0, Math.min(1, shown / 100));
+  const grade = gradeFor(shown);
+  const bonusDone = !bonus.active || bonus.phase === "done";
 
   const comment = useMemo(
     () => pickComment(item.score, `${item.id}:${item.score}`),
@@ -58,7 +69,7 @@ export default function ViewScene({
       </div>
 
       <div style={styles.gaugeArea}>
-        <ScoreGauge display={display} fraction={fraction} grade={item.grade} revealed={revealed} />
+        <ScoreGauge display={shown} fraction={fraction} grade={grade} revealed={revealed} />
         <div style={styles.statusLine} className="mono">
           <AnimatePresence mode="wait">
             {revealed ? (
@@ -68,7 +79,7 @@ export default function ViewScene({
                 animate={{ opacity: 1, y: 0 }}
                 style={{ color: "var(--blue-glow)", letterSpacing: "0.28em" }}
               >
-                {REVEAL_LABEL[item.grade] ?? "RESULT"}
+                {REVEAL_LABEL[grade] ?? "RESULT"}
               </motion.span>
             ) : (
               <motion.span
@@ -88,13 +99,18 @@ export default function ViewScene({
 
       <RevealOverlay
         compact
-        show={revealed}
+        show={revealed && bonusDone}
         score={item.score}
         badge={comment.badge}
         line={comment.line}
       />
 
-      <MobileBreakdown item={item} revealed={revealed} />
+      {/* BRAVE THROUGH ボーナスのシネマ演出（発動時のみ） */}
+      {bonus.active && item.bonus && (
+        <BraveThroughOverlay phase={bonus.phase} gain={item.bonus.to - item.bonus.from} />
+      )}
+
+      <MobileBreakdown item={item} revealed={revealed && bonusDone} />
     </div>
   );
 }
