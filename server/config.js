@@ -83,9 +83,9 @@ export const config = {
 
   // Lowest possible per-axis score. We never deduct below this floor so no photo
   // gets publicly humiliated — every shot starts from here and earns points up.
-  // Floor 10 keeps every total at or above 10 while leaving a wide spread of
-  // possible scores (10〜100) so good and great shots pull clearly apart.
-  scoreFloor: Number(process.env.FLOOR ?? 10),
+  // Floor 8 keeps every total at or above 8 while leaving a wide spread of
+  // possible scores (8〜100) so good and great shots pull clearly apart.
+  scoreFloor: Number(process.env.FLOOR ?? 8),
 
   // Scorer selection:
   //   "ai"    – Claude vision judges the real pixels (server/scorer/aiScorer.js)

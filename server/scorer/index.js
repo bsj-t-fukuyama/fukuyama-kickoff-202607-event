@@ -27,7 +27,7 @@ export const AXES = [
 // Default lowest per-axis score. Mirrors config.scoreFloor; kept here so the
 // scorer also works standalone. We add points on top of this floor (加点方式)
 // instead of deducting, so no photo is publicly humiliated.
-export const DEFAULT_FLOOR = 10;
+export const DEFAULT_FLOOR = 8;
 
 // Deterministic 0..1 hash from a string so the same image always scores the same.
 function seededRandom(seed) {
@@ -56,16 +56,21 @@ export function gradeFor(score) {
 // --- にぎやかさ（人数）軸の共有ロジック（AI判定・ダミー双方で使う） ----------
 // にぎやかさ軸の値(0..100)を、実際の人数だけで細かく決める。写り方や占有率では
 // 増減させない（純粋に頭数）。1人ごとに段差、多いほど高得点・多人数で頭打ち。
-// 大人数（特に10人以上の集合写真）をしっかり優遇するカーブ:
-//   1人は控えめ、2〜5人はやや控えめ、6〜9人は標準、9→10で大きく伸ばし12〜13人で頭打ち。
-//   0→20 / 1→32 / 2→45 / 3→55 / 4→64 / 5→71 / 6→78 / 7→83 / 8→87 / 9→90 / 10→95 / 11→97 / 12→99
+// 表示は にぎやかさ=40点満点なので「値 × 0.4 ≒ 表示点」。狙う表示点（±3点のブレ込み）:
+//   0人 → 5点以下（無人は最低水準）
+//   1人 → 5〜9点（0/1人は必ず9点より下）
+//   3〜19人 → ボリュームゾーン。人数で段差をつけてしっかり差別化（約12〜33点）
+//   20人以上 → 35点以上（大人数の集合写真を強く優遇）
+//   0→8 / 1→16 / 2→24 / 3→31 / 4→37 / 5→43 / 6→48 / 7→53 / 8→57 / 9→61 / 10→65
+//   11→68 / 12→71 / 13→73 / 14→75 / 15→77 / 16→79 / 17→80 / 18→81 / 19→82 / 20+→95〜100
 const PEOPLE_COUNT_TABLE = {
-  1: 32, 2: 45, 3: 55, 4: 64, 5: 71, 6: 78, 7: 83, 8: 87, 9: 90, 10: 95, 11: 97, 12: 99,
+  0: 8, 1: 16, 2: 24, 3: 31, 4: 37, 5: 43, 6: 48, 7: 53, 8: 57, 9: 61, 10: 65,
+  11: 68, 12: 71, 13: 73, 14: 75, 15: 77, 16: 79, 17: 80, 18: 81, 19: 82,
 };
 export function peopleScoreFromCount(n) {
-  if (!Number.isFinite(n) || n <= 0) return 20; // 祝う相手がいない
-  if (n <= 12) return PEOPLE_COUNT_TABLE[n];
-  return Math.min(100, 99 + (n - 12)); // 13人以降は微増、100で頭打ち
+  if (!Number.isFinite(n) || n <= 0) return PEOPLE_COUNT_TABLE[0]; // 祝う相手がいない
+  if (n <= 19) return PEOPLE_COUNT_TABLE[n];
+  return Math.min(100, 95 + (n - 20)); // 20人以上は35点以上の高得点ゾーン、100で頭打ち
 }
 
 // 画像IDから決まる安定した擬似乱数で [-range, +range] のブレを返す。
