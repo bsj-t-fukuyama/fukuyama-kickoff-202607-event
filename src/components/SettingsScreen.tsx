@@ -162,7 +162,7 @@ export default function SettingsScreen({ onBack }: { onBack: () => void }) {
           BRAVE THROUGH ボーナスの発生確率
         </label>
         <p style={styles.hint}>
-          50点以下の写真が 70〜91点へ格上げされる確率（%）。既定は 10%。0 にすると発動しません。
+          50点以下の写真が 70〜81点へ格上げされる確率（%）。既定は 10%。0 にすると発動しません。
         </p>
         <div style={styles.pctRow}>
           <input

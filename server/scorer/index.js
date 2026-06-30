@@ -120,7 +120,7 @@ export function composeResult(values, { weights, floor = DEFAULT_FLOOR } = {}) {
 }
 
 // --- BRAVE THROUGH ボーナス --------------------------------------------------
-// 50点以下の写真への救済チャンス。10% の確率で 70〜91点へ“格上げ”する（同じ写真
+// 50点以下の写真への救済チャンス。10% の確率で 70〜81点へ“格上げ”する（同じ写真
 // なら毎回同じ＝seed 固定）。格上げ時は、足りない得点を各軸へ按分して帳尻を合わせる:
 // どの軸も 100 へ向けて同じ割合 t だけ引き上げると重み付き平均がちょうど目標点になり、
 // かつどの軸も 100 を超えない（t = (target-from)/(100-from)）。結果の breakdown も
@@ -128,7 +128,7 @@ export function composeResult(values, { weights, floor = DEFAULT_FLOOR } = {}) {
 export const BONUS_THRESHOLD = 50; // この点数以下が対象
 export const BONUS_CHANCE = 0.1; // 発動確率
 export const BONUS_MIN = 70; // 格上げ後の下限
-export const BONUS_MAX = 91; // 格上げ後の上限
+export const BONUS_MAX = 81; // 格上げ後の上限
 
 export function maybeBraveThroughBonus(
   result,
@@ -140,7 +140,7 @@ export function maybeBraveThroughBonus(
   if (rand() >= chance) return result;
 
   const from = result.score;
-  const target = BONUS_MIN + Math.floor(rand() * (BONUS_MAX - BONUS_MIN + 1)); // 70..91
+  const target = BONUS_MIN + Math.floor(rand() * (BONUS_MAX - BONUS_MIN + 1)); // 70..81
   const t = from >= 100 ? 0 : (target - from) / (100 - from);
   const boosted = {};
   for (const axis of result.breakdown) boosted[axis.key] = axis.value + t * (100 - axis.value);

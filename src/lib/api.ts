@@ -17,7 +17,7 @@ export type JudgeSignals = {
   note?: string;
 };
 
-// BRAVE THROUGH ボーナス: 50点以下が10%で 70〜91点へ格上げされたときだけ付く。
+// BRAVE THROUGH ボーナス: 50点以下が10%で 70〜81点へ格上げされたときだけ付く。
 // score/grade/breakdown は既に格上げ後の値。from=元の低い点、to=格上げ後の点。
 export type BraveThroughBonus = {
   applied: boolean;

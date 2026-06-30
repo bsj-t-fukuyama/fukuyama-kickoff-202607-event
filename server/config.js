@@ -88,7 +88,7 @@ export const config = {
   scoreFloor: Number(process.env.FLOOR ?? 8),
 
   // BRAVE THROUGH ボーナスの発動確率（0..1）。50点以下の写真が、この確率で
-  // 70〜91点へ格上げされる。既定 0.1（10%）。/settings から実行時に変更できる。
+  // 70〜81点へ格上げされる。既定 0.1（10%）。/settings から実行時に変更できる。
   bonusChance: Number(process.env.BONUS_CHANCE ?? 0.1),
 
   // Scorer selection:
